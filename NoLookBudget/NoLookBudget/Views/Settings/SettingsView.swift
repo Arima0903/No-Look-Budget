@@ -88,6 +88,12 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .background(Color(red: 0.1, green: 0.1, blue: 0.11).ignoresSafeArea())
             .preferredColorScheme(.dark)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("閉じる") { dismiss() }
+                        .foregroundColor(.yellow)
+                }
+            }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
