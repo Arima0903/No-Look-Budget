@@ -1,78 +1,85 @@
-# No-Look-Budget 初期実装計画
+# No-Look-Budget 実装計画 (Master Plan v1.0)
 
-## 目指すゴール
-Figma等のツールの代わりにSwiftUIモックでUI/UX検証を完了させました。
-ここからは、導入した強力な専門スキル（`swiftui-expert-skill`, `ui-ux-pro-max`, `architecture-patterns`, `swiftui-ui-patterns`, `qa-test-planner` 等）と、テスト駆動開発（TDD）・体系的デバッグの手法をフル活用し、堅牢で拡張性の高い**SwiftData連携（CRUD処理）および借金ロジックの本実装**へ移行します。
+## 1. 目指すゴールと提供価値 (マーケティング連動)
+本アプリのターゲットは「浪費家・ADHD傾向で継続が苦手なユーザー」です。
+既存の家計簿アプリが陥りがちな「入力の面倒さ」「立替による完璧主義の崩壊」を防ぐため、以下の3つの価値（MVPコア）を最優先で実現します。
 
----
+1. **強制視界占有 (No-Look Experience)**: ウィジェットによる残高・色（警告）のダイナミック表示。
+2. **極限の1タップ入力**: アプリを開かず、ウィジェットから直接金額だけを入れる体験。
+3. **立替セパレーター**: 立替分をスワイプ等で別枠に逃し、自己予算を綺麗に保つ仕組み。
 
-## User Review Required
-
-> [!IMPORTANT]
-> **Figma契約の不要論について**
-> SwiftUIは非常に強力な宣言的UIフレームワークであり、デザインツール（Figma）で絵を描くのと同じかそれ以上のスピードで「実際のアプリ画面」を構築できます。
-> 余計なコストをかけず、**「実際のiPhoneシミュレーター上で動く（アニメーションする）SwiftUIモック」**を作ることで、最も正確に触り心地を検証できます。
-
-> [!NOTE]
-> **Apple Wallet 連携に関する技術検証**
-> サードパーティ製アプリから「Apple Payで決済された瞬間の金額と店舗情報」をバックグラウンドで完全に自動取得するAPIは、Appleのセキュリティ制限上非常に厳しい可能性があります。
-> 万が一技術的に不可能な場合、別のローフリクション入力（ショートカットアプリとの連携や、強力な通知からの直接入力など）へのピボットが必要になるため、まずはこの技術調査（PoC）を最優先で行います。
+現在、**これらの要素を盛り込んだSwiftUIによるUI/UXモックの実装は完了**しています。
+今後は取得した専門スキル（アーキテクチャ、UI/UX、テスト駆動、QA自動化）をフル活用し、堅牢なデータ連動（SwiftData）フェーズへ移行します。
 
 ---
 
-## Proposed Changes
+## 2. User Review Required (要確認事項)
 
-今回は初期立ち上げフェーズのため、主にプロトタイプとしての土台を作ります。
-
-### 1. 調査・PoC (Proof of Concept)
-まずはソースコードを書く前に、以下の仕様を公式ドキュメントや検証コードで調査・確定させます。
-* **[NEW] Apple Wallet連携の技術仕様調査**
-  * `PassKit` や `FinanceKit`（iOS 17.4+）などの現状の仕様から、決済フックが可能か調査。
-* **[NEW] WidgetKitの動的更新調査**
-  * iOS 18環境において、アプリを起動せずにウィジェット側からインタラクティブに残高を減らすアクション（AppIntents）がどこまでリッチに表現できるかを検証。
-
-### 2. データモデル設計
-アプリ内完結のローカルDBとして、最新の `SwiftData` を用いたスキーマを定義します。
-* **[NEW] `Models/Budget.swift`**: 全体の予算と残高を管理するモデル。（前月の予算超過分を次月以降の予算金額から自動減額する「借金繰越機能」を包含する）
-* **[NEW] `Models/ItemCategory.swift`**: 項目別の予算（POKER, NOMIKAI等）を管理するモデル。
-* **[NEW] `Models/IOUManager.swift`**: 立替プール（別枠）を管理・集計するモデル
-
-### 3. SwiftUI モックアプリ構築 (MVP UI) - **[完了]**
-Figmaの代わりに、ダミーデータを使って動くUIモックを作成し、画面遷移と基本レイアウトの検証を完了しました。
-
-### 4. [NEXT] 実データ連携・ビジネスロジック実装（SwiftData CRUD処理）
-ここからが本番のアプリケーション設計・実装フェーズです。導入したスキル（`architecture-patterns`, `systematic-debugging`, `test-driven-development`等）に基づき、以下のサイクルで進めます。
-
-* **[NEW] ViewModel / DataManagerの構築**
-  * Viewからデータの処理ロジックを分離するため、`SwiftData` をラップする Repository パターンや ViewModel (MVVM) を導入します。
-* **[NEW] CRUD処理の実装と結合**
-  * `QuickInputModalView` からの支出登録（Create）
-  * `DashboardView` への予算・残高の自動反映（Read / Update）
-  * `TransactionHistoryView` での履歴の編集・削除（Update / Delete）
-* **[NEW] 月跨ぎの初期化＆借金プールへのロジック適用**
-  * `MonthlyReviewView` にて、予算オーバー分を翌月の予算から引く（または借金プールへ入れる）ロジックの実装。
-
-### 5. 高度なUI/UXの洗練とウィジェット実装
-* データのCRUDが安定した段階で、`swiftui-ui-patterns` と `ui-ux-pro-max` のスキルを適用し、トランジションアニメーションやコンポーネントの再利用性を高めます。
-* **アプリ外アクションの実装**:
-  * `NoLookBudgetWidget.swift`: 予算状況（色・グラデーション）をダイナミックに可視化するウィジェット
-  * ディープリンク（`nolookbudget://dashboard`, `nolookbudget://category/[カテゴリ名]`）を利用したアプリ本体へのルーティング機能の実装。
-
-### 6. コンプライアンス・法務要件
-各種ガイドラインやライセンスを遵守するための事前設定（一部完了済）。
-各種ガイドラインやライセンスを遵守するための事前設定を行います。
-* **[NEW] `docs/compliance/app_store_guidelines.md`**: App Store審査のリスク管理ドキュメント。
-* **[NEW] `docs/compliance/oss_licenses.md`**: OSS依存とコピーレフト回避のライセンス管理リスト。
-* **[NEW] `docs/compliance/intellectual_property.md`**: フォント・画像等の知財管理ルール。
+> [!CAUTION]
+> **Apple Wallet (Apple Pay) 連携の実現要件について**
+> マーケティング戦略上の［Must Have］として挙げられている「Apple Wallet決済時の自動即時反映」は、サードパーティ（一般開発者）向けとしてはセキュリティ上の制約からAPI（PassKit/FinanceKit等）が開放されていないか、著しく制限されている可能性が高いです。
+> この点は**最優先の技術検証（PoC）**タスクとし、不可だった場合は「Apple Shortcuts（ショートカットアプリ）を用いた自動化」へのピボットを直ちに検討します。
 
 ---
 
-## Verification Plan
+## 3. アプリケーション・アーキテクチャ設計
+`architecture-patterns` スキルに則り、SwiftUIとSwiftDataを強結合させず、メンテナンス性の高い設計を採用します。
 
-### Manual Verification
-1. **[UI検証]**
-   提供したSwiftUIコードをユーザーの手元（MacのXcode）でビルド＆Runしていただき、シミュレーターまたは実機のiPhone上で「残高の見え方」「立替スワイプ/トグルの触り心地」を直接テスト（Vibe Check）していただきます。
-2. **[アーキテクチャ・技術検証]**
-   事前調査レポート（PoC結果）をマークダウン形式で提出し、実現不可能な機能があった場合の代替案について合意を取ります。
-3. **[コンプライアンス検証]**
-   利用するサードパーティ製ライブラリにGPL等の違反ライセンスが含まれていないか、初期設定の段階でリストをチェックします。
+### 採用パターン: MVVM + Repository Pattern
+```mermaid
+graph TD
+    View[SwiftUI Views] --> VM[ViewModels]
+    VM --> Rep[Repositories]
+    Rep --> SD[SwiftData / ModelContext]
+    SD --> Entities[Budget / Category / Transaction / IOU]
+```
+* **View**: UIの描画とユーザー入力の受け付けのみ（View内に`@Query`を直接書くことは極力避ける）。
+* **ViewModel**: 画面ごとの状態管理とビジネスロジック（借金計算や立替フラグの処理）を担当。
+* **Repository**: SwiftDataのCRUD処理を隠蔽するプロトコルベースのデータアクセス層（これによりテスト時のモック差し替えが容易になる）。
+
+---
+
+## 4. 開発フェーズと実装マイルストーン
+
+### Phase 1: 基礎データ層の構築 (TDDベース)
+`test-driven-development` のスキルに基づき、まずはロジック単体のテスト（Unit Test）を先行させます。
+* **[NEW] `Models/`**: `Budget`, `ItemCategory`, `Transaction`, `IOUManager` のスキーマ定義。
+* **[NEW] `Repositories/`**: 支出の保存（Create）、残高の集計（Read）を行うRepositoryの実装とテスト。
+* **[NEW] 月跨ぎ・借金繰越ロジック**: `BudgetCalculator`（仮）を作成し、「前月のマイナス分」を次期予算から自動減額するロジックをテスト駆動で実装。
+
+### Phase 2: コアUIへのデータ統合 (MVVM化)
+モック（ダミーデータ）で動いているViewにViewModelを接続します。
+* **[MODIFY] `QuickInputModalView.swift`**: ViewModel経由での実際のトランザクション登録。
+* **[MODIFY] `DashboardView.swift` / `CategoryDetailView.swift`**: DBの現在残高に基づいたゲージのアニメーションと色の動的変化（`ui-ux-pro-max`適用）。
+* **[MODIFY] `TransactionHistoryView.swift`**: 登録済みデータの編集・削除（Undoの代替）ロジックの結合。
+
+### Phase 3: 月末の最重要イベント (Review & Adjusting)
+* **[MODIFY] `MonthlyReviewView.swift`**: 月末の決算処理（黒字/赤字の確定）と、借金が発生した場合の「翌月予算からの減額（または分割回収）」をデータベースに確定させる処理。
+
+### Phase 4: ウィジェット（No-Look Experience）の実装
+* **[NEW] `NoLookBudgetWidget`**: AppIntentを利用し、最新のSwiftData残高を反映させたダイナミックウィジェット。
+* **[NEW] ウィジェットからのディープリンク・直接入力**: ウィジェットのボタンから `QuickInputModalView` を直接指定カテゴリで開く導線。
+
+---
+
+## 5. 品質保証 (QA) とデバッグ戦略
+
+`qa-test-planner` および `systematic-debugging` スキルに則り、以下のテスト戦略を敷きます。
+
+### Automated Tests (自動テスト)
+1. **ユニットテスト (Unit Tests)**
+   * SwiftDataのインメモリコンテキストを利用し、`Repository` のCRUD動作を検証。
+   * 立替プール（別枠）と通常予算の計算が混ざらないかの境界値テスト。
+2. **UIテスト (XCUITest)**
+   * 1タップ入力フロー（ウィジェットタップ → 金額入力 → 保存）が最短ストロークで完了し、エラー画面に遷移しないことの担保。
+
+### Manual Verification (手動 / Vibe Check)
+* UI/UXの「触り心地（Vibe）」は、実装するたびに必ず実機（またはシミュレータ）で確認します。
+* スワイプ操作による立替セパレートの手触り感（アニメーションの滑らかさ）を `swiftui-ui-patterns` に則り微調整します。
+
+---
+
+## 6. コンプライアンス・リリース要件
+各種ガイドラインやライセンスを遵守するための設定（構築済のMarkdown管理）。
+* `docs/compliance/app_store_guidelines.md` (審査対策)
+* `docs/compliance/oss_licenses.md` (OSS管理)
