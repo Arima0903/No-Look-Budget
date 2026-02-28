@@ -1,42 +1,66 @@
-# No-Look-Budget: UI Flow
+# No-Look-Budget: UI Flow (画面遷移図)
 
-アプリの画面遷移と主要なユーザー導線の設計です。
+アプリの画面遷移と主要なユーザー導線の設計です。MVP（初期リリース）における画面構成を表現しています。
 
 ```mermaid
 graph TD
     classDef main fill:#212121,stroke:#4CAF50,stroke-width:2px,color:#fff;
-    classDef split fill:#212121,stroke:#F44336,stroke-width:2px,color:#fff;
+    classDef modal fill:#212121,stroke:#FF9800,stroke-width:2px,color:#fff;
+    classDef detail fill:#212121,stroke:#9C27B0,stroke-width:2px,color:#fff;
     classDef widget fill:#1E1E1E,stroke:#03A9F4,stroke-width:2px,color:#fff;
-    classDef hidden fill:#333333,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray: 5 5,color:#fff;
 
     %% Entry Points
-    LockScreenWidget[iOS Lock Screen Widget]:::widget
-    HomeScreenWidget[iOS Home Screen Widget]:::widget
+    HomeScreenWidget[ホーム画面ウィジェット<br>NoLookBudgetWidget]:::widget
     
     %% Core App
     subgraph App [No-Look-Budget App]
-        Dashboard[メインダッシュボード<br>（全体予算グラフ ＋ 項目別小ウィジェット）]:::main
-        InputModal[1タップ入力モーダル<br>（テンキー ＋ 「立替」切り替えスイッチ）]:::main
-        ItemDetail[項目別詳細画面<br>（履歴・設定）]:::main
-        Config[全体設定・予算修正]:::hidden
+        Dashboard[メインダッシュボード<br>DashboardView]:::main
+        InputModal[1タップ入力モーダル 兼 電卓<br>QuickInputModalView]:::modal
+        
+        subgraph Details [詳細・設定系]
+            CategoryDetail[カテゴリ別詳細画面<br>CategoryDetailView]:::detail
+            DebtRecovery[借金回収設定画面<br>DebtRecoveryView]:::detail
+            DebtSourceSelection[減額元選択画面<br>DebtRecoverySourceSelectionView]:::detail
+        end
     end
 
-    %% Flows
-    LockScreenWidget -->|Tap| Dashboard
-    HomeScreenWidget -->|Tap| Dashboard
-    
-    Dashboard -->|Tap "QUICK-SYNC & LOG"| InputModal
-    Dashboard -->|Tap 小ウィジェット（例: POKER）| ItemDetail
-    Dashboard -->|Long Press 小ウィジェット| InputModal
-    
-    InputModal -->|金額入力 ＋ 通常登録| Dashboard
-    InputModal -->|金額入力 ＋ 立替(Front)タブで登録| Dashboard
-    %% ※立替登録時は、全体の残高ゲージには影響を与えず、立替専用の小ウィジェット（IOU）に追加される
+    %% Flows (Widget)
+    HomeScreenWidget -->|Tap 円グラフ(例: 食費)| InputModal
+    HomeScreenWidget -->|Tap その他領域| Dashboard
 
-    Dashboard -->|Settings Icon| Config
+    %% Flows (In-App)
+    Dashboard -->|Tap "QUICK-SYNC & LOG"| InputModal
+    Dashboard -->|Tap 小ウィジェット（各カテゴリ）| CategoryDetail
+    
+    CategoryDetail -->|Tap "回収プランを決める"| DebtRecovery
+    DebtRecovery -->|Tap "次へ（減額元の選択）"| DebtSourceSelection
+    
+    %% Return Flows
+    InputModal -->|金額入力 ＋ "使う(=)"タップ| Dashboard
+    CategoryDetail -.->|Back| Dashboard
+    DebtSourceSelection -.->|完了後自動遷移| Dashboard
 ```
 
-## 画面遷移の要件（マーケティング戦略に基づく）
-* 「開かなくてもわかる管理」を実現するため、**最重要UIはアプリアイコンを開いた画面ではなく、ロック画面・ホーム画面のウィジェット**です。
-* **Frictionless Nomikai Sync（立替セパレーター）**: 「入力画面でのトグルスイッチ（案B）」を採用します。テンキー画面で直感的に「自分の出費」か「立替」かを切り替えられ、将来的な回収管理にも繋がる拡張性を持たせます。
-* Apple Wallet連携（自動入力）が発生した場合は、アプリを開いた際（またはバックグラウンド）で自動的にDashboardのメイン残高が更新されます。
+## 各画面のスクリーンショット（プレースホルダー）
+
+※開発中のため、スクリーンショットは仮の枠組みです。実装が進み次第、適宜画像をアップデートしてください。
+
+### 1. 予算可視化ウィジェット (NoLookBudgetWidget)
+ホーム画面に配置される、開かずとも予算の消化具合を色で把握できる巨大ゲージ。
+`[ここにウィジェットのスクショを配置]`
+
+### 2. メインダッシュボード (DashboardView)
+全体予算の可視化と、各項目の小ウィジェットが並ぶホーム画面。
+`[ここにダッシュボードのスクショを配置]`
+
+### 3. クイック入力・電卓モーダル (QuickInputModalView)
+ウィジェットから直行できる、1タップで予算項目を選択し、電卓で計算・入力が完結する画面。
+`[ここに入力モーダルのスクショを配置]`
+
+### 4. カテゴリ別詳細・借金警告 (CategoryDetailView)
+各カテゴリの詳細状況と、過去に使いすぎた予算（借金）がある場合にアラートが出る画面。
+`[ここにカテゴリ詳細のスクショを配置]`
+
+### 5. 借金回収プラン設定 (DebtRecoveryView / DebtRecoverySourceSelectionView)
+使いすぎたマイナス分を、「翌月一括でどこかのカテゴリから引く」のか、「数ヶ月に分割する(プレミアム機能)」のかを選択する画面。
+`[ここに借金回収画面のスクショを配置]`

@@ -12,6 +12,5 @@ import SwiftUI
 struct NoLookBudgetWidgetBundle: WidgetBundle {
     var body: some Widget {
         NoLookBudgetWidget()
-        NoLookBudgetWidgetControl()
     }
 }
