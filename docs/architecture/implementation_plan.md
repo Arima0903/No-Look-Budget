@@ -1,4 +1,4 @@
-# No-Look-Budget 実装計画 (Master Plan v1.0)
+# No-Look-Budget 実装計画 (Master Plan v2.0)
 
 ## 1. 目指すゴールと提供価値 (マーケティング連動)
 本アプリのターゲットは「浪費家・ADHD傾向で継続が苦手なユーザー」です。
@@ -9,77 +9,108 @@
 3. **立替セパレーター**: 立替分をスワイプ等で別枠に逃し、自己予算を綺麗に保つ仕組み。
 
 現在、**これらの要素を盛り込んだSwiftUIによるUI/UXモックの実装は完了**しています。
-今後は取得した専門スキル（アーキテクチャ、UI/UX、テスト駆動、QA自動化）をフル活用し、堅牢なデータ連動（SwiftData）フェーズへ移行します。
+今後は堅牢なアーキテクチャ設計、App Groupを利用したウィジェット連携、そしてテスト駆動開発（TDD）による実データ連動フェーズへ移行します。
 
 ---
 
-## 2. User Review Required (要確認事項)
+## 2. 既知の制約とスコープ外事項 (Risk & Out of Scope)
 
-> [!CAUTION]
-> **Apple Wallet (Apple Pay) 連携の実現要件について**
-> マーケティング戦略上の［Must Have］として挙げられている「Apple Wallet決済時の自動即時反映」は、サードパーティ（一般開発者）向けとしてはセキュリティ上の制約からAPI（PassKit/FinanceKit等）が開放されていないか、著しく制限されている可能性が高いです。
-> この点は**最優先の技術検証（PoC）**タスクとし、不可だった場合は「Apple Shortcuts（ショートカットアプリ）を用いた自動化」へのピボットを直ちに検討します。
+> [!WARNING]
+> **Apple Wallet (Apple Pay) 連携のスコープ外化**
+> マーケティング戦略上で理想としていた「Apple Wallet決済時の自動即時反映」は、サードパーティ向けに開放されたAPIが存在しないため、**MVPの技術的スコープから除外（Alternativeへ移行）** します。
+> 当面は「ウィジェットからの超高速手動入力」を唯一のデータソースとして磨き込みます。将来的な自動化はiOSの進化待ち、または「Apple Shortcuts（ショートカットアプリ）」を用いたハック的アプローチでのみ検証します。
 
 ---
 
 ## 3. アプリケーション・アーキテクチャ設計
-`architecture-patterns` スキルに則り、SwiftUIとSwiftDataを強結合させず、メンテナンス性の高い設計を採用します。
 
-### 採用パターン: MVVM + Repository Pattern
+### 3.1. 採用パターン: MVVM + Repository Pattern
 ```mermaid
 graph TD
-    View[SwiftUI Views] --> VM[ViewModels]
+    View[SwiftUI Views / Widgets] --> VM[ViewModels / IntentHandlers]
     VM --> Rep[Repositories]
-    Rep --> SD[SwiftData / ModelContext]
-    SD --> Entities[Budget / Category / Transaction / IOU]
+    Rep --> SD[SwiftData Container]
+    SD -.->|App Group| Shared[Shared App Group Storage]
+    SD --> Entities[Budget / Category / Transaction / IOURecord]
 ```
-* **View**: UIの描画とユーザー入力の受け付けのみ（View内に`@Query`を直接書くことは極力避ける）。
-* **ViewModel**: 画面ごとの状態管理とビジネスロジック（借金計算や立替フラグの処理）を担当。
-* **Repository**: SwiftDataのCRUD処理を隠蔽するプロトコルベースのデータアクセス層（これによりテスト時のモック差し替えが容易になる）。
+* **View**: UIの描画とユーザー入力の受け付けのみ（View内に`@Query`を直接書くことは避ける）。
+* **ViewModel**: 画面ごとの状態管理とビジネスロジックを担当。
+* **Repository**: プロトコル（例: `BudgetRepositoryProtocol`）として定義し、CRUD処理をカプセル化。テスト時はモック（`MockBudgetRepository`）に差し替える。
+
+### 3.2. データ共有と異常系ハンドリング
+* **App Group**: メインアプリとウィジェット（App Extension）間でSwiftDataのContainer（SQLite）を共有するため、`App Group`（例: `group.com.arima0903.NoLookBudget`）を設定し、保存領域を共通化します。
+* **エラーハンドリング**:
+    * SwiftData保存失敗時は `do-catch` で捕捉し、ユーザーフレンドリーなエラーアラートを表示。
+    * 意図しない月跨ぎ処理のクラッシュを防ぐため、バッチ実行前には現状の残高状態を一時キャッシュし、失敗時にロールバックできるリカバリ処理を含めます。
 
 ---
 
-## 4. 開発フェーズと実装マイルストーン
+## 4. 開発フェーズとスケジュール（マイルストーン）
 
-### Phase 1: 基礎データ層の構築 (TDDベース)
-`test-driven-development` のスキルに基づき、まずはロジック単体のテスト（Unit Test）を先行させます。
-* **[NEW] `Models/`**: `Budget`, `ItemCategory`, `Transaction`, `IOUManager` のスキーマ定義。
-* **[NEW] `Repositories/`**: 支出の保存（Create）、残高の集計（Read）を行うRepositoryの実装とテスト。
-* **[NEW] 月跨ぎ・借金繰越ロジック**: `BudgetCalculator`（仮）を作成し、「前月のマイナス分」を次期予算から自動減額するロジックをテスト駆動で実装。
+各フェーズはアジャイル的に進行し、完了条件（Definition of Done）を満たすことで次へ進みます。
+※スケジュール（Dayは相対的な作業日数）
 
-### Phase 2: コアUIへのデータ統合 (MVVM化)
-モック（ダミーデータ）で動いているViewにViewModelを接続します。
-* **[MODIFY] `QuickInputModalView.swift`**: ViewModel経由での実際のトランザクション登録。
-* **[MODIFY] `DashboardView.swift` / `CategoryDetailView.swift`**: DBの現在残高に基づいたゲージのアニメーションと色の動的変化（`ui-ux-pro-max`適用）。
-* **[MODIFY] `TransactionHistoryView.swift`**: 登録済みデータの編集・削除（Undoの代替）ロジックの結合。
+### Phase 0: 環境構築とスキーマ定義 (Day 1)
+コーディング着手前の必須設定を行います。
+* **[タスク]**:
+  * XcodeのTarget設定にて `App Group` を追加し、共有ディレクトリを有効化。
+  * `Models/` 以下のスキーマ定義（`Budget`, `ItemCategory`, `Transaction`, `IOURecord`）の確定と、`@Model` マクロへの依存確認。
+  * Repositoryプロトコル（`TransactionRepositoryProtocol` 等）のシグネチャ定義。
+* **[完了条件 (DoD)]**:
+  * App Groupが有効な状態でアプリがビルドできること。
+  * データモデルのエンティティ関係（ER図相当）がコード上で定義されていること。
 
-### Phase 3: 月末の最重要イベント (Review & Adjusting)
-* **[MODIFY] `MonthlyReviewView.swift`**: 月末の決算処理（黒字/赤字の確定）と、借金が発生した場合の「翌月予算からの減額（または分割回収）」をデータベースに確定させる処理。
+### Phase 1: 基礎データ層の構築とTDD (Day 2-3)
+ワークスペースに導入した `test-driven-development` の考え方に則り、Unit Testを先行実装します。
+* **[タスク]**:
+  * モックリポジトリとインメモリSwiftDataコンテナの構築。
+  * **実装する具体的なテストケース**:
+    1. `test_addTransaction_reducesBudgetBalance` (支出追加で予算残高が減るか)
+    2. `test_iouTransaction_doesNotAffectMainBudget` (立替出費がメイン予算に影響しないか)
+    3. `test_carryOverDebt_deductsFromNextMonthBudget` (月跨ぎ時に前月のマイナス分が次月予算から引かれるか)
+* **[完了条件 (DoD)]**:
+  * `Tests/` ディレクトリ配下にXCTestのファイルが整備され、上記のコアロジックテストが全て `Passed`（グリーン）になること。
 
-### Phase 4: ウィジェット（No-Look Experience）の実装
-* **[NEW] `NoLookBudgetWidget`**: AppIntentを利用し、最新のSwiftData残高を反映させたダイナミックウィジェット。
-* **[NEW] ウィジェットからのディープリンク・直接入力**: ウィジェットのボタンから `QuickInputModalView` を直接指定カテゴリで開く導線。
+### Phase 2: ウィジェットの早期結合検証 (Day 4)
+本アプリのコアバリューである「ウィジェット体験」を技術的に一番重いリスクとして捉え、早期にプロトタイプ化します。
+* **[タスク]**:
+  * Phase 1で構築したSwiftDataコンテナ（App Group共有）を読み込む `NoLookBudgetWidget` のバックエンド連携。
+  * iOS 18+ の `AppIntent` を用いた「ウィジェットボタンからの支出登録」の疎通確認。
+* **[完了条件 (DoD)]**:
+  * アプリ側で登録した出費がウィジェットの残高に反映されること。
+  * ウィジェット側のボタン操作で、アプリを開かずにDBのデータが更新されること。
+
+### Phase 3: コアUIのMVVM化とCRUD結合 (Day 5-6)
+既存のモックViewをViewModel経由で実際のデータベースに接続します。
+* **[タスク]**:
+  * `QuickInputModalView.swift`: ViewModel経由での即時トランザクション登録（手動入力）。
+  * `DashboardView.swift` / `CategoryDetailView.swift`: DBの監視とUIの自動更新（ゲージ色変容）。
+  * `TransactionHistoryView.swift`: 登録済みデータの修正・削除の実装。
+* **[完了条件 (DoD)]**:
+  * シミュレータ上で、ホーム画面〜入力〜履歴編集の一連のUI操作が実データを伴って破データを伴って破綻なく動作すること。
+
+### Phase 4: 月末イベント処理の実装 (Day 7)
+* **[タスク]**:
+  * `MonthlyReviewView.swift`: 月替わり処理。前月の集計と「借金繰越（またはIOUプールへの移動）」をDBトランザクションとして安全に実行するロジック。
+* **[完了条件 (DoD)]**:
+  * 端末の時刻を翌月に進めた際、適切に「予算リセット」と「借金マイナス」が適用された状態のダッシュボードが表示されること。
 
 ---
 
-## 5. 品質保証 (QA) とデバッグ戦略
+## 5. 品質保証 (QA) とデザイン洗練
 
-`qa-test-planner` および `systematic-debugging` スキルに則り、以下のテスト戦略を敷きます。
+導入済みのスキルを基に品質を高めます。
 
-### Automated Tests (自動テスト)
-1. **ユニットテスト (Unit Tests)**
-   * SwiftDataのインメモリコンテキストを利用し、`Repository` のCRUD動作を検証。
-   * 立替プール（別枠）と通常予算の計算が混ざらないかの境界値テスト。
-2. **UIテスト (XCUITest)**
-   * 1タップ入力フロー（ウィジェットタップ → 金額入力 → 保存）が最短ストロークで完了し、エラー画面に遷移しないことの担保。
-
-### Manual Verification (手動 / Vibe Check)
-* UI/UXの「触り心地（Vibe）」は、実装するたびに必ず実機（またはシミュレータ）で確認します。
-* スワイプ操作による立替セパレートの手触り感（アニメーションの滑らかさ）を `swiftui-ui-patterns` に則り微調整します。
+1. **自動テストの継続**:
+   * 機能追加のたびにPhase 1で定義したXCTestを実行し、リグレッションを防ぎます。
+2. **UI/UXのブラッシュアップ**:
+   * CRUD結合が安定した後、スワイプ操作の手触りやゲージのアニメーションを最適化します。
+3. **エラーハンドリング検証**:
+   * ウィジェットからの連続タップ等、意図しない異常操作時のレースコンディションが発生しないか境界値テストを手動で実施します。
 
 ---
 
 ## 6. コンプライアンス・リリース要件
 各種ガイドラインやライセンスを遵守するための設定（構築済のMarkdown管理）。
-* `docs/compliance/app_store_guidelines.md` (審査対策)
-* `docs/compliance/oss_licenses.md` (OSS管理)
+* `docs/compliance/app_store_guidelines.md` (審査対策・WidgetKitの更新頻度制限等についてのチェック事項)
+* `docs/compliance/oss_licenses.md` (OSSパッケージの記録)
