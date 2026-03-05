@@ -3,9 +3,16 @@
 | 項目 | 内容 |
 |------|------|
 | ドキュメントID | DD-001 |
-| バージョン | 1.0 |
+| バージョン | 2.0 |
 | 最終更新日 | 2026-03-06 |
 | 対応基本設計 | BD-001 |
+
+## 改版履歴
+
+| バージョン | 日付 | 変更内容 | 変更者 |
+|-----------|------|---------|--------|
+| 1.0 | 2026-03-06 | 初版作成 | 開発チーム |
+| 2.0 | 2026-03-06 | deleteTransaction/updateExpenseのIOU判定追加、境界値・エッジケース仕様追加、ViewModel状態一覧表追加 | 開発チーム |
 
 ---
 
@@ -14,7 +21,6 @@
 ### 1.1 Model層
 
 基本設計書 §2 に定義したエンティティを SwiftData `@Model` マクロで実装する。
-各エンティティはファイル単位で分離する。
 
 | ファイル | クラス | 責務 |
 |----------|--------|------|
@@ -27,116 +33,126 @@
 
 ### 1.2 Service層
 
-| ファイル | プロトコル/クラス | メソッド | 責務 |
-|----------|------------------|---------|------|
-| `TransactionService.swift` | `TransactionServiceProtocol` | (下記参照) | CRUD操作のインターフェース |
-| `TransactionService.swift` | `TransactionService` | (下記参照) | 具象実装 |
-
 #### TransactionServiceProtocol メソッド一覧
 
-| メソッド | 引数 | 戻り値 | 説明 |
-|----------|------|--------|------|
-| `addExpense` | `amount: Double, category: ItemCategory?, isIOU: Bool` | `throws` | 支出/立替の追加 |
-| `addIncome` | `amount: Double` | `throws` | 臨時収入の追加 |
-| `processMonthlyReview` | `currentDate: Date` | `throws` | 月跨ぎ処理 |
-| `recoverDebt` | `sourceCategoryName, targetCategoryName, amount` | `throws` | 借金回収 |
-| `updateExpense` | `id: UUID, amount, category, isIOU` | `throws` | 支出の更新 |
-| `updateIncome` | `id: UUID, amount: Double` | `throws` | 収入の更新 |
-| `deleteTransaction` | `id: UUID` | `throws` | トランザクション削除と予算復元 |
+| メソッド | 引数 | 戻り値 | 対応要件 | 説明 |
+|----------|------|--------|---------|------|
+| `addExpense` | `amount: Double, category: ItemCategory?, isIOU: Bool` | `throws` | FR-001,002 | 支出/立替の追加 |
+| `addIncome` | `amount: Double` | `throws` | FR-003 | 臨時収入の追加 |
+| `processMonthlyReview` | `currentDate: Date` | `throws` | FR-008 | 月跨ぎ処理 |
+| `recoverDebt` | `sourceCategoryName, targetCategoryName, amount` | `throws` | FR-008 | 借金回収 |
+| `updateExpense` | `id: UUID, amount, category, isIOU` | `throws` | FR-005 | 支出の更新（isIOU考慮） |
+| `updateIncome` | `id: UUID, amount: Double` | `throws` | FR-005 | 収入の更新 |
+| `deleteTransaction` | `id: UUID` | `throws` | FR-005 | トランザクション削除と予算復元（isIOU考慮） |
 
 ### 1.3 ViewModel層
 
-| ファイル | クラス | 対応画面 | 責務 |
-|----------|--------|---------|------|
-| `DashboardViewModel.swift` | `DashboardViewModel` | SCR-001 | 予算データ取得・表示状態管理・推移グラフ生成 |
-| `QuickInputViewModel.swift` | `QuickInputViewModel` | SCR-002 | 入力式管理・バリデーション・保存処理 |
-| `TransactionHistoryViewModel.swift` | `TransactionHistoryViewModel` | SCR-003 | 履歴データ取得・削除 |
-| `CategoryDetailViewModel.swift` | `CategoryDetailViewModel` | SCR-004 | カテゴリ別履歴・予算表示 |
-| `IOUViewModel.swift` | `IOUViewModel` | SCR-005 | 立替一覧・回収処理 |
-| `MonthlyReviewViewModel.swift` | `MonthlyReviewViewModel` | SCR-006 | 月末レビューデータ・次月処理 |
-| `ConfigurationViewModel.swift` | `ConfigurationViewModel` | SCR-007/008 | 予算設定・カテゴリCRUD・固定費同期 |
-| `DebtRecoveryViewModel.swift` | `DebtRecoveryViewModel` | (ダイアログ) | 借金回収ソース選択 |
+| ファイル | クラス | 対応画面 | 主要@Published プロパティ |
+|----------|--------|---------|--------------------------|
+| `QuickInputViewModel.swift` | `QuickInputViewModel` | SCR-002 | `expressionText`, `iouExpression`, `myExpenseExpression`, `currentFocus`, `inputMode`, `isIOUMode`, `showAlert`, `alertMessage` |
+| `DashboardViewModel.swift` | `DashboardViewModel` | SCR-001 | `currentBudget`, `categories`, `recentTransactions`, `dailySpending` |
+| `TransactionHistoryViewModel.swift` | `TransactionHistoryViewModel` | SCR-003 | `transactions` |
+| `CategoryDetailViewModel.swift` | `CategoryDetailViewModel` | SCR-004 | `category`, `transactions` |
+| `IOUViewModel.swift` | `IOUViewModel` | SCR-005 | `unresolvedIOUs`, `resolvedIOUs` |
+| `MonthlyReviewViewModel.swift` | `MonthlyReviewViewModel` | SCR-006 | `currentBudget`, `overAmount` |
+| `ConfigurationViewModel.swift` | `ConfigurationViewModel` | SCR-007/008 | `budget`, `categories`, `fixedCosts` |
+| `DebtRecoveryViewModel.swift` | `DebtRecoveryViewModel` | (ダイアログ) | `sourceCategories` |
 
 ---
 
 ## 2. 処理詳細設計
 
-### 2.1 QuickInputViewModel — 立替2段入力の保存処理
-
-```swift
-func logExpense() -> Bool {
-    // ① IOUモード判定
-    guard inputMode == .expense && isIOUMode else {
-        // 通常の1段入力処理へ分岐
-        return handleNormalExpense()
-    }
-
-    // ② 計算結果の取得
-    let totalAmount = calculateResult(for: iouExpression) -> Double
-    let myExpenseAmount = calculateResult(for: myExpenseExpression) -> Double
-
-    // ③ バリデーション (VLD-101)
-    if myExpenseExpression == "0" {
-        showAlert("自分の支出額を入力してください")
-        return false
-    }
-
-    // ④ バリデーション (VLD-102)
-    if totalAmount < myExpenseAmount {
-        showAlert("立替総額が自分の支出額より小さくなっています")
-        return false
-    }
-
-    // ⑤ 実立替金の算出
-    let actualIOUAmount = totalAmount - myExpenseAmount
-
-    // ⑥ トランザクション生成
-    if actualIOUAmount > 0 {
-        transactionService.addExpense(amount: actualIOUAmount, isIOU: true)
-        // → Budget.spentAmount は変化しない
-    }
-    if myExpenseAmount > 0 {
-        transactionService.addExpense(amount: myExpenseAmount, isIOU: false)
-        // → Budget.spentAmount += myExpenseAmount
-        // → ItemCategory.spentAmount += myExpenseAmount
-    }
-
-    return true
-}
-```
-
-### 2.2 TransactionService.addExpense — 支出追加処理
+### 2.1 addExpense — 支出/立替追加
 
 ```
 入力: amount, category, isIOU
+前提条件: amount > 0
+
 処理:
-  1. ExpenseTransaction を生成し context に挿入
-  2. category が指定されている場合:
-     category.spentAmount += amount
-  3. isIOU == false の場合のみ:
-     Budget(当月).spentAmount += amount
+  1. ExpenseTransaction(amount, categoryId, isIOU, isIncome=false) を生成
+  2. if isIOU == true:
+       IOURecord(amount, title=category.name) を生成
+       → Budget / Category への影響なし
+  3. if isIOU == false:
+       if category != nil:
+         category.spentAmount += amount
+       Budget(最新月).spentAmount += amount
   4. context.save()
   5. WidgetCenter.shared.reloadAllTimelines()
 ```
 
-### 2.3 TransactionService.deleteTransaction — 削除と復元
+### 2.2 deleteTransaction — 削除と予算復元
 
 ```
 入力: id (UUID)
 処理:
   1. id で ExpenseTransaction を検索
-  2. isIncome == true の場合:
-     Budget.totalAmount -= amount
-  3. isIOU == false && isIncome == false の場合:
-     Budget.spentAmount -= amount
-  4. categoryId があれば:
-     ItemCategory.spentAmount -= amount
-  5. context.delete(transaction)
+  2. 分岐:
+     ┌─ isIncome == true:
+     │    Budget.totalAmount -= amount (min: 0)
+     ├─ isIOU == false && isIncome == false:
+     │    Budget.spentAmount -= amount (min: 0)
+     │    Category.spentAmount -= amount (min: 0)
+     └─ isIOU == true:
+          → Budget / Category への復元処理なし
+  3. context.delete(transaction)
+  4. context.save()
+  5. reloadWidgets()
+```
+
+### 2.3 updateExpense — 支出更新（isIOU考慮）
+
+```
+入力: id, amount, category, isIOU
+処理:
+  1. id で既存トランザクションを検索
+  2. 旧isIOUの値を保存 (oldIsIOU = transaction.isIOU)
+  3. if oldIsIOU == false:
+       旧金額をBudget / Categoryから差し戻す
+  4. トランザクションを更新 (amount, categoryId, isIOU)
+  5. if isIOU == false:
+       新金額をBudget / Categoryに加算
   6. context.save()
   7. reloadWidgets()
 ```
 
-### 2.4 calculateResult — 計算式評価
+### 2.4 logExpense (QuickInputViewModel) — 立替2段入力保存
+
+```swift
+func logExpense() -> Bool {
+    // ① IOUモード判定
+    guard inputMode == .expense && isIOUMode else {
+        return handleNormalExpense()
+    }
+
+    // ② 計算結果の取得
+    let totalAmount = calculateResult(for: iouExpression)
+    let myExpenseAmount = calculateResult(for: myExpenseExpression)
+
+    // ③ バリデーション (VLD-101): 初期値"0"は未入力扱い
+    if myExpenseExpression == "0" {
+        showAlert("自分の支出額を入力してください")
+        return false
+    }
+
+    // ④ バリデーション (VLD-102): 総額 >= 自己支出
+    if totalAmount < myExpenseAmount {
+        showAlert("立替総額が自分の支出額より小さくなっています")
+        return false
+    }
+
+    // ⑤ トランザクション生成（2件）
+    let actualIOUAmount = totalAmount - myExpenseAmount
+    if actualIOUAmount > 0:
+        addExpense(amount: actualIOUAmount, isIOU: true)
+    if myExpenseAmount > 0:
+        addExpense(amount: myExpenseAmount, isIOU: false)
+
+    return true
+}
+```
+
+### 2.5 calculateResult — 計算式評価
 
 ```
 入力: expressionText (String)
@@ -144,11 +160,22 @@ func logExpense() -> Bool {
   1. 記号置換: "×"→"*", "÷"→"/", "％"→"/100"
   2. 文字種チェック: [0-9+-*/.() ] 以外 → nil
   3. 末尾チェック: 末尾が演算子/小数点 → nil
-  4. 連続演算子チェック → nil
+  4. 連続演算子チェック (++, --, **, //, +-, -+, */, /*) → nil
   5. NSExpression(format:) で評価
   6. 結果が負数なら "0" を返す
 戻り値: 計算結果の文字列 or nil
 ```
+
+#### 境界値・エッジケース仕様
+
+| 入力 | 期待結果 | 理由 |
+|------|---------|------|
+| "0" | "0" | 正常な数値 |
+| "" | nil | 空文字は不正 |
+| "999999999999999" | (整数上限に依存) | 15文字制限で入力は防止済み |
+| "100-200" | "0" | 負数は0として返す |
+| "100." | nil | 末尾小数点は不完全式 |
+| "0+0" | "0" | 正常（VLD-101で入力済みとみなされる） |
 
 ---
 
@@ -165,10 +192,10 @@ func logExpense() -> Bool {
 │                        金額  │  ← 1段入力表示
 │                     = ¥計算  │
 ├──────────────────────────────┤
-│ [食費] [交際費] [変動費]      │  ← カテゴリ選択
+│ [食費] [交際費] [変動費]      │  ← カテゴリ選択 (2行3列)
 │ [    ] [    ] [    ]         │
 ├──────────────────────────────┤
-│ [C ] [％] [÷] [⌫]           │  ← キーパッド
+│ [C ] [％] [÷] [⌫]           │  ← キーパッド (5行4列)
 │ [7 ] [8 ] [9 ] [×]          │
 │ [4 ] [5 ] [6 ] [- ]          │
 │ [1 ] [2 ] [3 ] [+ ]          │
@@ -182,23 +209,32 @@ func logExpense() -> Bool {
 ┌──────────────────────────────┐
 │ [×]   [支出|臨時収入]  [立替] │  ← オレンジグロー背景
 ├──────────────────────────────┤
-│ みんなの立替分        金額   │  ← 上段（タップでフォーカス）
-│ 自分自身の支出        金額   │  ← 下段（タップでフォーカス）
+│ みんなの立替分        金額   │  ← 上段（フォーカス時: 橙枠・橙文字）
+│ 自分自身の支出        金額   │  ← 下段（フォーカス時: 白枠・白文字）
 ├──────────────────────────────┤
-│ [食費] [交際費] [変動費]      │  ← カテゴリ選択
+│ 対象のカテゴリ(立替用)       │  ← ラベル変化
+│ [食費] [交際費] [変動費]      │
 ├──────────────────────────────┤
 │         (キーパッド)          │  ← activeBindingで対象切替
+│         [=立替]              │  ← ボタン文言変化
 └──────────────────────────────┘
 ```
 
 ### 3.2 フォーカス管理
 
-| 状態 | 上段（IOU） | 下段（自己支出） |
-|------|------------|----------------|
-| `currentFocus == .iou` | オレンジ枠線・オレンジ文字 | グレー文字・枠線なし |
-| `currentFocus == .myExpense` | グレー文字・枠線なし | 白枠線・白文字 |
+| 状態 | 上段（立替分） | 下段（自己支出） | キーパッドBindingの対象 |
+|------|-------------|----------------|----------------------|
+| `currentFocus == .iou` | オレンジ枠線・オレンジ文字・背景強調 | グレー文字・枠線なし | `iouExpression` |
+| `currentFocus == .myExpense` | グレー文字・枠線なし | 白枠線・白文字・背景強調 | `myExpenseExpression` |
 
-キーパッドの `Binding<String>` は `currentFocus` に応じて `iouExpression` または `myExpenseExpression` に動的バインドする。
+### 3.3 確定ボタンの動的テキスト
+
+| inputMode | isIOUMode | isEditing | ボタン表示 |
+|-----------|:---------:|:---------:|-----------|
+| expense | false | false | 「使う」 |
+| expense | true | false | 「立替」 |
+| income | - | false | 「追加」 |
+| - | - | true | 「更新」 |
 
 ---
 
@@ -206,16 +242,17 @@ func logExpense() -> Bool {
 
 ### 4.1 バリデーションエラー
 
-| ID | 契機 | 表示方法 | アクション |
-|----|------|---------|-----------|
-| VLD-101 | 立替確定時に自己支出未入力 | Alert ダイアログ | OK で閉じる、モーダルは閉じない |
-| VLD-102 | 立替確定時に総額 < 自己支出 | Alert ダイアログ | OK で閉じる、モーダルは閉じない |
+| ID | 契機 | 表示方法 | ユーザーアクション | 画面挙動 |
+|----|------|---------|-----------------|---------|
+| VLD-101 | 立替確定時に自己支出が初期値"0"のまま | Alert ダイアログ | OK をタップ | モーダルは閉じない。再入力可能 |
+| VLD-102 | 立替確定時に立替総額 < 自己支出 | Alert ダイアログ | OK をタップ | モーダルは閉じない。再入力可能 |
 
 ### 4.2 データベースエラー
 
-| 契機 | 処理 |
-|------|------|
-| SwiftData save失敗 | `try?` で握りつぶし（現状）。将来的にはユーザーフレンドリーなアラート表示に改善予定 |
+| 契機 | 現状の処理 | 改善予定 |
+|------|-----------|---------|
+| SwiftData context.save() 失敗 | `try?` で握りつぶし | ユーザーフレンドリーなAlert表示 |
+| SwiftData fetch 失敗 | `try?` で空配列/nil返却 | ログ出力の追加 |
 
 ---
 
@@ -223,8 +260,8 @@ func logExpense() -> Bool {
 
 ### 5.1 ボタン配置
 
-| 行 | ボタン1 | ボタン2 | ボタン3 | ボタン4 |
-|----|---------|---------|---------|---------|
+| 行 | Col1 | Col2 | Col3 | Col4 |
+|----|------|------|------|------|
 | 1 | C | ％ | ÷ | ⌫ |
 | 2 | 7 | 8 | 9 | × |
 | 3 | 4 | 5 | 6 | - |
@@ -233,10 +270,20 @@ func logExpense() -> Bool {
 
 ### 5.2 ボタン挙動
 
-| ボタン | 挙動 |
-|--------|------|
-| C | 式を `"0"` にリセット |
-| ⌫ | 末尾1文字削除。1文字の場合は `"0"` に |
-| = | `onCommit()` を呼び出し（保存処理実行） |
-| 演算子 | 末尾が既に演算子なら置換。式は最大15文字 |
-| 数字 | 現在値が `"0"` なら置換、それ以外は末尾追加 |
+| ボタン | 挙動 | 制約 |
+|--------|------|------|
+| C | 式を `"0"` にリセット | - |
+| ⌫ | 末尾1文字削除。1文字の場合は `"0"` にリセット | - |
+| = | `onCommit()` を呼び出し（保存処理実行） | - |
+| 演算子 (+,-,×,÷,％,.) | 末尾が既に演算子なら置換 | 式は最大15文字 |
+| 数字 (0-9, 00) | 現在値が `"0"` なら置換、それ以外は末尾追加 | 式は最大15文字 |
+
+### 5.3 ボタン色設計
+
+| ボタン種別 | 前景色 | 背景 |
+|-----------|--------|------|
+| 数字 | 白 | ultraThinMaterial |
+| 演算子/機能 | グレー | white.opacity(0.15) |
+| C / ⌫ | グレー | white.opacity(0.1) |
+| = (通常/収入) | 黒 or 白 | 緑グラデーション |
+| = (立替) | 白 | オレンジ→赤グラデーション |

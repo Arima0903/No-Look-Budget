@@ -3,58 +3,79 @@
 | 項目 | 内容 |
 |------|------|
 | ドキュメントID | IT-001 |
-| バージョン | 1.0 |
+| バージョン | 2.0 |
 | 最終更新日 | 2026-03-06 |
 | 対応設計書 | BD-001 / DD-001 |
 | テストレベル | 結合テスト（Integration Test） |
-| 実施方法 | XCTest + シミュレータ操作 |
+| 実施方法 | XCTest + インメモリSwiftDataコンテナ |
+
+## 改版履歴
+
+| バージョン | 日付 | 変更内容 |
+|-----------|------|---------|
+| 1.0 | 2026-03-06 | 初版作成 |
+| 2.0 | 2026-03-06 | IOU削除/更新テスト追加、共通前提条件の明示、テスト実施順序の整理 |
 
 ---
 
 ## 1. テスト方針
 
-ITでは、View ⇔ ViewModel ⇔ Service ⇔ SwiftData の結合動作を検証する。
-インメモリのSwiftDataコンテナを使用し、実際のデータフローを通しでテストする。
+- ITでは、ViewModel ⇔ Service ⇔ SwiftData の**結合動作**を検証する
+- インメモリの SwiftData コンテナを使用し、実際のデータフローを通しでテストする
+- 各テストは前のテストの影響を受けないよう、`setUp` で初期化する
 
 ---
 
-## 2. テストケース
+## 2. 共通前提条件
 
-### 2.1 支出入力→ダッシュボード反映
+各テスト開始時に以下の初期データが投入済みであること。
 
-| ID | テスト観点ID | テスト項目 | 操作 | 期待結果 |
-|----|------------|----------|------|---------|
-| IT-001 | TP-10 | 支出入力でダッシュボード連動 | QuickInputVMで支出500保存 → DashboardVM.fetchData() | Dashboard側のrecentTransactionsに該当支出あり、Budget残高減少 |
-| IT-002 | TP-10 | カテゴリ予算も連動 | QuickInputVMで食費500保存 | DashboardVM.categoriesの食費.spentAmount増加 |
-| IT-003 | TP-11 | 臨時収入で予算増加連動 | QuickInputVMで収入50000保存 | DashboardVM.currentBudget.totalAmount増加 |
+| データ | 値 |
+|--------|-----|
+| Budget | month=当月, totalAmount=250000, spentAmount=0 |
+| ItemCategory "食費" | totalAmount=50000, spentAmount=0, orderIndex=0 |
+| ItemCategory "交際費" | totalAmount=30000, spentAmount=0, orderIndex=1 |
 
-### 2.2 立替入力→各画面連動
+---
 
-| ID | テスト観点ID | テスト項目 | 操作 | 期待結果 |
-|----|------------|----------|------|---------|
-| IT-004 | TP-12 | 立替2段入力の保存と表示 | iou=5000, myExpense=2000で保存 → DashboardVM.fetchData() | 自己支出分(2000)がrecentTransactionsに表示 |
-| IT-005 | TP-12 | 立替分は予算に影響しない | iou=5000, myExpense=2000で保存 | Budget.spentAmount += 2000のみ（3000は影響なし） |
-| IT-006 | TP-12 | 立替分が履歴に表示される | iou=5000, myExpense=2000 | TransactionHistoryVMに2件表示（IOU=3000, 支出=2000） |
+## 3. テストケース
 
-### 2.3 編集・削除→予算復元
+### 3.1 支出入力→ダッシュボード反映
 
 | ID | テスト観点ID | テスト項目 | 操作 | 期待結果 |
 |----|------------|----------|------|---------|
-| IT-007 | TP-13 | 支出編集で差分反映 | 500→1000に編集 | Budget.spentAmount差分+500、カテゴリも連動 |
-| IT-008 | TP-14 | 支出削除で予算復元 | 1000の支出を削除 | Budget.spentAmount -= 1000、カテゴリも復元 |
-| IT-009 | TP-15 | 固定費は履歴から削除不可 | isFixedCost=trueの履歴を削除操作 | 削除されない（guard で弾かれる） |
+| IT-001 | TP-10 | 支出入力でダッシュボード連動 | QuickInputVM: 食費500円を保存 → DashboardVM.fetchData() | recentTransactions に食費500円あり、Budget.remainingAmount == 249500 |
+| IT-002 | TP-10 | カテゴリ予算も連動 | QuickInputVM: 食費500円を保存 | DashboardVM.categories の食費.spentAmount == 500 |
+| IT-003 | TP-11 | 臨時収入で予算増加 | QuickInputVM: 臨時収入50000 | DashboardVM の budget.totalAmount == 300000 |
 
-### 2.4 月跨ぎ処理
-
-| ID | テスト観点ID | テスト項目 | 操作 | 期待結果 |
-|----|------------|----------|------|---------|
-| IT-010 | TP-16 | 月次レビュー実行 | processMonthlyReview | 次月Budgetが生成、借金繰越反映 |
-| IT-011 | TP-16 | 借金回収処理 | recoverDebt(source, target, amount) | 各カテゴリのspentAmount調整 |
-
-### 2.5 設定変更→データ連動
+### 3.2 立替入力→各画面連動
 
 | ID | テスト観点ID | テスト項目 | 操作 | 期待結果 |
 |----|------------|----------|------|---------|
-| IT-012 | TP-17 | カテゴリ追加 | ConfigurationVMでカテゴリ追加 | DashboardVMのcategoriesに反映 |
-| IT-013 | TP-17 | 固定費追加→トランザクション生成 | FixedCostSetting追加 → 保存 | isFixedCost=trueのExpenseTransactionが自動生成 |
-| IT-014 | TP-18 | 予算額変更 | Budget.totalAmount変更 | DashboardVMのremainingAmount連動 |
+| IT-004 | TP-12 | 立替2段入力の保存と表示 | iou=5000, myExpense=2000 で保存 → DashboardVM.fetchData() | recentTransactions に自己支出2000円あり |
+| IT-005 | TP-12 | 立替分は予算に影響しない | iou=5000, myExpense=2000 で保存 | Budget.spentAmount == 2000（3000は影響なし） |
+| IT-006 | TP-12 | 立替分が履歴に表示 | iou=5000, myExpense=2000 で保存 | TransactionHistoryVM に2件表示（IOU=3000, 支出=2000） |
+
+### 3.3 編集・削除→予算復元
+
+| ID | テスト観点ID | テスト項目 | 操作 | 期待結果 |
+|----|------------|----------|------|---------|
+| IT-007 | TP-13 | 支出編集で差分反映 | 食費500→1000に編集 | Budget.spentAmount == 1000、食費.spentAmount == 1000 |
+| IT-008 | TP-14 | 通常支出削除で予算復元 | 食費1000の支出を削除 | Budget.spentAmount == 0、食費.spentAmount == 0 |
+| IT-009 | TP-14 | **IOU削除で予算不変** | IOU(3000)を削除 | **Budget.spentAmount が変化しないこと** |
+| IT-010 | TP-15 | 固定費は履歴から削除不可 | isFixedCost=true の履歴を削除 | 削除されない |
+
+### 3.4 月跨ぎ処理
+
+| ID | テスト観点ID | テスト項目 | 操作 | 期待結果 |
+|----|------------|----------|------|---------|
+| IT-011 | TP-16 | 月次レビュー実行 | Budget(spent=270000) → processMonthlyReview | 次月Budget.spentAmount == 20000（借金繰越） |
+| IT-012 | TP-16 | 借金回収処理 | recoverDebt("食費", "交際費", 5000) | 食費.totalAmount -= 5000、交際費.spentAmount -= 5000 |
+
+### 3.5 設定変更→データ連動
+
+| ID | テスト観点ID | テスト項目 | 操作 | 期待結果 |
+|----|------------|----------|------|---------|
+| IT-013 | TP-17 | カテゴリ追加 | ConfigurationVM でカテゴリ追加 | DashboardVM.categories に反映 |
+| IT-014 | TP-17 | 固定費追加→トランザクション生成 | FixedCostSetting 追加 → 保存 | isFixedCost=true の ExpenseTransaction が自動生成 |
+| IT-015 | TP-18 | 予算額変更 | Budget.totalAmount を 300000 に変更 | DashboardVM の remainingAmount == 300000 |
