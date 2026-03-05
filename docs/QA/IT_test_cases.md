@@ -79,3 +79,12 @@
 | IT-013 | TP-17 | カテゴリ追加 | ConfigurationVM でカテゴリ追加 | DashboardVM.categories に反映 |
 | IT-014 | TP-17 | 固定費追加→トランザクション生成 | FixedCostSetting 追加 → 保存 | isFixedCost=true の ExpenseTransaction が自動生成 |
 | IT-015 | TP-18 | 予算額変更 | Budget.totalAmount を 300000 に変更 | DashboardVM の remainingAmount == 300000 |
+
+### 3.6 ソート順・0件データ
+
+| ID | テスト観点ID | テスト項目 | 操作 | 期待結果 |
+|----|------------|----------|------|---------|
+| IT-016 | No.19 | 支出履歴のソート順 | 異なる日時で3件保存 → TransactionHistoryVM取得 | 日付降順で表示されること（TISカタログ 画面-20準拠） |
+| IT-017 | No.20 | 0件データ時のダッシュボード | 支出0件の状態でDashboardVM.fetchData() | クラッシュせず空状態で表示されること |
+| IT-018 | No.20 | 0件データ時の履歴画面 | 支出0件の状態でTransactionHistoryVM取得 | クラッシュせず空リスト表示 |
+

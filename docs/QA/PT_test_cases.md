@@ -57,6 +57,8 @@
 | PT-CR-010 | TP-04 | ゼロ入力 | "0" | "0" | 境界値 |
 | PT-CR-011 | TP-04 | 複合式 | "1000+500×2" | "3000" | 演算子優先順位 |
 | PT-CR-012 | TP-04 | 末尾小数点 | "100." | nil | 不完全式の拒否 |
+| PT-CR-013 | No.5 | 最大長(15文字) | "123456789012345" | 計算結果を返す | 上限値テスト（TISカタログ Val-6） |
+| PT-CR-014 | No.6 | 16文字目の入力拒否 | 15文字の式に追加入力 | 16文字目が入力されないこと | 上限超過テスト（TISカタログ Val-8） |
 
 ### 2.3 TransactionService
 
@@ -73,3 +75,5 @@
 | PT-TS-009 | TP-07 | **IOU→IOU更新で予算不変** | Budget(spent=0), IOU(3000) | updateExpense(id, 5000, cat, true) | - | **Budget.spentAmount==0** |
 | PT-TS-010 | TP-05 | 金額0の支出は無視される | Budget(spent=0) | addExpense(0, 食費, false) | - | Budget.spentAmount==0（guard で弾かれる） |
 | PT-TS-011 | TP-07 | 収入削除でtotalAmount減 | Budget(total=150000), 収入50000 | deleteTransaction(id) | - | Budget.totalAmount==100000 |
+| PT-TS-012 | No.32 | 存在しないIDの削除でクラッシュしない | Budget(spent=0) | deleteTransaction(存在しないUUID) | - | エラー・クラッシュなし（TISカタログ DB-34準拠） |
+
