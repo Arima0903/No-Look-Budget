@@ -90,10 +90,9 @@ class ConfigurationViewModel: ObservableObject {
         
         // 当月の臨時収入の合計を取得してベース予算に合算する
         var extraIncomeTotal: Double = 0
-        let calendar = Calendar.current
         if let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: currentBudget.month)),
            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1, hour: 23, minute: 59, second: 59), to: startOfMonth) {
-            let predicate = #Predicate<ExpenseTransaction> { tx in
+            let predicate = #Predicate<ExpenseTransaction> { (tx: ExpenseTransaction) in
                 tx.date >= startOfMonth && tx.date <= endOfMonth && tx.isIncome == true
             }
             let desc = FetchDescriptor<ExpenseTransaction>(predicate: predicate)
