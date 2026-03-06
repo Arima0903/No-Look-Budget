@@ -41,7 +41,6 @@ class DashboardViewModel: ObservableObject {
         let ctx = context ?? SharedModelContainer.shared.mainContext
         self.context = ctx
         self.transactionService = TransactionService(context: ctx)
-        setupMockDataIfNeeded()
         fetchData()
     }
     
@@ -156,30 +155,5 @@ class DashboardViewModel: ObservableObject {
     func openInputModal(with category: String? = nil) {
         self.initialInputCategory = category
         self.showInputModal = true
-    }
-    
-    private func setupMockDataIfNeeded() {
-        let budgetDesc = FetchDescriptor<Budget>()
-        let existingBudgets = (try? context.fetch(budgetDesc)) ?? []
-        if existingBudgets.isEmpty {
-            let mockBudget = Budget(month: Date(), totalAmount: 250000, spentAmount: 100000)
-            context.insert(mockBudget)
-            
-            let cat1 = ItemCategory(name: "食費", totalAmount: 50000, spentAmount: 30000, orderIndex: 0)
-            let cat2 = ItemCategory(name: "交際費", totalAmount: 30000, spentAmount: 15000, orderIndex: 1)
-            let cat3 = ItemCategory(name: "変動費", totalAmount: 20000, spentAmount: 5000, orderIndex: 2)
-            let cat4 = ItemCategory(name: "変動費 A", totalAmount: 20000, spentAmount: 10000, orderIndex: 3)
-            let cat5 = ItemCategory(name: "変動費 B", totalAmount: 10000, spentAmount: 2000, orderIndex: 4)
-            let cat6 = ItemCategory(name: "変動費 C", totalAmount: 15000, spentAmount: 20000, orderIndex: 5)
-            
-            context.insert(cat1)
-            context.insert(cat2)
-            context.insert(cat3)
-            context.insert(cat4)
-            context.insert(cat5)
-            context.insert(cat6)
-            
-            try? context.save()
-        }
     }
 }

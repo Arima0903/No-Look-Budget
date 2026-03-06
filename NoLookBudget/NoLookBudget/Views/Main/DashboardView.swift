@@ -1,75 +1,93 @@
 import SwiftUI
 import SwiftData
+import Charts
 
 struct DashboardView: View {
-    @Environment(\.modelContext) private var modelContext
+    @StateObject private var viewModel = DashboardViewModel()
     @EnvironmentObject private var deepLinkManager: DeepLinkManager
-    @Query private var budgets: [Budget]
-    @Query(sort: \ItemCategory.orderIndex) private var categories: [ItemCategory]
     
-    @State private var showInputModal = false
-    @State private var showSettings = false
-    @State private var showHistory = false
-    @State private var showMonthlyReview = false
-    @State private var showSideMenu = false
-    @State private var initialInputCategory: String? = nil
-    @State private var navigationPath = NavigationPath() // 追加: ルーティング管理用
-    @State private var hasDebtFromLastMonth = true // モック用の借金フラグ
-    
-    // モックデータとして、最初の予算を取得（なければ画面表示時に生成）
-    var currentBudget: Budget? {
-        budgets.first
-    }
+    @State private var navigationPath = NavigationPath() // ルーティング管理用
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                // 背景色 (ダークモード基調)
-                Color(red: 0.13, green: 0.13, blue: 0.14).ignoresSafeArea()
+                // 背景 (ダークモード基調)
+                Color(red: 0.08, green: 0.08, blue: 0.09).ignoresSafeArea()
+                
+                // 予算オーバー時の警告グローエフェクト
+                if let bg = viewModel.currentBudget, bg.spentAmount > bg.totalAmount {
+                    RadialGradient(
+                        gradient: Gradient(colors: [Color.red.opacity(0.15), Color.clear]),
+                        center: .top,
+                        startRadius: 50,
+                        endRadius: 400
+                    )
+                    .ignoresSafeArea()
+                    .pulseAnimation() // カスタムアニメーション
+                }
+
                 
                 VStack(spacing: 30) {
-                    // 予算オーバー警告
-                    if let bg = currentBudget, bg.spentAmount > bg.totalAmount {
+                    // 予算オーバー警告 (Glassmorphism)
+                    if let bg = viewModel.currentBudget, bg.spentAmount > bg.totalAmount {
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.red)
-                            Text("予算をオーバーしています！")
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .foregroundColor(.red)
-                            Spacer()
-                            Button("確認する") {
-                                showMonthlyReview = true
+                                .font(.title3)
+                                Text("予算をオーバーしています！")
+                                    .font(.subheadline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                Spacer()
                             }
-                            .font(.caption.bold())
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.red)
-                            .cornerRadius(5)
-                        }
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 10)
+                            .padding(.horizontal, 15)
+                        .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
-                        .background(Color.red.opacity(0.15))
-                        .cornerRadius(10)
+                        .background(Material.ultraThinMaterial)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                     }
                     
-                    // メインの予算ゲージ（金額表示を内部に含む）
-                    NavigationLink(destination: BudgetDetailView(budget: currentBudget)) {
-                        BudgetGaugeView(budget: currentBudget)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("今月の残り予算")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                            .padding(.horizontal, 20)
+                        
+                        // メインの予算ゲージ（金額表示を内部に含む）
+                        HStack {
+                            Spacer()
+                            NavigationLink(destination: BudgetDetailView(
+                                budget: viewModel.currentBudget,
+                                recentTransactions: viewModel.recentTransactions,
+                                dailyTrends: viewModel.dailyTrends,
+                                onDelete: viewModel.deleteRecentTransaction
+                            )) {
+                                BudgetGaugeView(budget: viewModel.currentBudget)
+                                    .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .padding(.top, viewModel.currentBudget?.spentAmount ?? 0 > viewModel.currentBudget?.totalAmount ?? 0 ? 0 : 10)
+                            Spacer()
+                        }
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.top, currentBudget?.spentAmount ?? 0 > currentBudget?.totalAmount ?? 0 ? 0 : 40) // 警告がある場合は余白を詰める
+
                     
                     // 支出入力ボタン（メインアクション）
                     VStack(spacing: 15) {
-                        // 借金警告ボタン
-                        if hasDebtFromLastMonth {
+                        // 借金警告ボタン (Glassmorphism)
+                        if viewModel.hasDebtFromLastMonth {
                             Button(action: {
-                                showMonthlyReview = true
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                                viewModel.showMonthlyReview = true
                             }) {
                                 HStack {
                                     Image(systemName: "exclamationmark.triangle")
@@ -83,86 +101,101 @@ struct DashboardView: View {
                                 .foregroundColor(.yellow)
                                 .padding(.horizontal, 15)
                                 .padding(.vertical, 12)
-                                .background(Color.yellow.opacity(0.15))
-                                .cornerRadius(10)
+                                .background(Material.ultraThin)
+                                .cornerRadius(12)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.yellow.opacity(0.5), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.yellow.opacity(0.4), lineWidth: 1)
                                 )
                             }
                         }
                         
                         Button(action: {
-                            initialInputCategory = nil
-                            showInputModal = true
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.impactOccurred()
+                            viewModel.initialInputCategory = nil
+                            viewModel.showInputModal = true
                         }) {
                             HStack {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title3)
-                                Text("支出を入力")
+                                Text("記録をつける")
                                     .fontWeight(.bold)
                             }
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color(red: 0.4, green: 0.9, blue: 0.6))
-                            .cornerRadius(15)
+                            .padding(.vertical, 18)
+                            .background(
+                                LinearGradient(colors: [Color(red: 0.4, green: 0.9, blue: 0.6), Color(red: 0.2, green: 0.8, blue: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            )
+                            .cornerRadius(16)
+                            .shadow(color: Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.4), radius: 10, x: 0, y: 5)
                         }
+                        .buttonStyle(ScaleButtonStyle())
                     }
                     .padding(.horizontal, 20)
                     
                     // 下部：項目別の小ウィジェット（カテゴリ）
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 20) {
-                    if categories.isEmpty {
-                        // モック用ダミーカテゴリ
-                        NavigationLink(value: "食費") {
-                            CategoryGaugeView(name: "食費", amount: 20000, ratio: 0.8)
-                        }
-                        NavigationLink(value: "交際費") {
-                            CategoryGaugeView(name: "交際費", amount: 15000, ratio: 0.4) // 色指定統一のためisIOUを除外
-                        }
-                        NavigationLink(value: "変動費") {
-                            CategoryGaugeView(name: "変動費", amount: 15000, ratio: 0.1)
-                        }
-                        NavigationLink(value: "変動費 A") {
-                            CategoryGaugeView(name: "変動費 A", amount: 10000, ratio: 0.5)
-                        }
-                        NavigationLink(value: "変動費 B") {
-                            CategoryGaugeView(name: "変動費 B", amount: 8000, ratio: 0.2)
-                        }
-                        NavigationLink(value: "変動費 C") {
-                            CategoryGaugeView(name: "変動費 C", amount: -5000, ratio: 1.33)
-                        }
-                    } else {
-                        ForEach(categories) { category in
-                            let ratio = category.totalAmount > 0 ? (category.spentAmount / category.totalAmount) : 0
-                            NavigationLink(value: category.name) {
-                                CategoryGaugeView(name: category.name, amount: Int(category.remainingAmount), ratio: ratio)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("予算別残り予算")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                            .padding(.horizontal, 20)
+                            
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 20) {
+                            if viewModel.categories.isEmpty {
+                                // カテゴリ未設定時の空状態UI
+                                VStack(spacing: 15) {
+                                    Image(systemName: "folder.badge.plus")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(.gray.opacity(0.5))
+                                    Text("カテゴリがありません\n左上のメニューから設定してください")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .multilineTextAlignment(.center)
+                                }
+                                // グリッドの3列分の中央に配置するためのハック
+                                .frame(maxWidth: .infinity)
+                                .gridCellColumns(3)
+                                .padding(.top, 20)
+                            } else {
+                                ForEach(viewModel.categories) { category in
+                                    let ratio = category.totalAmount > 0 ? (category.spentAmount / category.totalAmount) : 0
+                                    NavigationLink(value: category.name) {
+                                        CategoryGaugeView(name: category.name, amount: Int(category.remainingAmount), ratio: ratio)
+                                    }
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        let generator = UIImpactFeedbackGenerator(style: .light)
+                                        generator.impactOccurred()
+                                    })
+                                }
                             }
                         }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.top, 10)
+                        .padding(.horizontal, 20)
                     }
-                }
-                .buttonStyle(PlainButtonStyle())
-                .padding(.top, 10)
-                .padding(.horizontal, 20)
                 
                 Spacer()
             }
             
             // サイドメニューのオーバーレイ
-            if showSideMenu {
+            if viewModel.showSideMenu {
                 Color.black.opacity(0.5)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation { showSideMenu = false }
+                        withAnimation { viewModel.showSideMenu = false }
                     }
                 
                 HStack {
                     SideMenuView(
-                        showHistory: $showHistory,
-                        showSettings: $showSettings,
-                        showMonthlyReview: $showMonthlyReview,
-                        showSideMenu: $showSideMenu
+                        showHistory: $viewModel.showHistory,
+                        showSettings: $viewModel.showSettings,
+                        showMonthlyReview: $viewModel.showMonthlyReview,
+                        showIOU: $viewModel.showIOU,
+                        showBudgetConfig: $viewModel.showBudgetConfig,
+                        showCategoryConfig: $viewModel.showCategoryConfig,
+                        showSideMenu: $viewModel.showSideMenu
                     )
                     .frame(width: 260)
                     
@@ -181,7 +214,9 @@ struct DashboardView: View {
             }
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
-                    withAnimation { showSideMenu = true }
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+                    withAnimation { viewModel.showSideMenu = true }
                 }) {
                     Image(systemName: "line.3.horizontal")
                         .font(.title2)
@@ -190,32 +225,51 @@ struct DashboardView: View {
             }
         }
         .onAppear {
-            setupMockDataIfNeeded()
+            viewModel.fetchData()
             // コールドスタート（アプリ完全停止時）からのディープリンク対応
             if let categoryName = deepLinkManager.selectedCategory {
-                initialInputCategory = categoryName
-                showInputModal = true
+                viewModel.initialInputCategory = categoryName
+                viewModel.showInputModal = true
                 deepLinkManager.selectedCategory = nil
             }
         }
-        .sheet(isPresented: $showInputModal) {
-            QuickInputModalView(initialCategoryName: initialInputCategory)
+        .sheet(isPresented: $viewModel.showInputModal, onDismiss: {
+            viewModel.fetchData()
+        }) {
+            QuickInputModalView(initialCategoryName: viewModel.initialInputCategory)
                 .presentationDetents([.fraction(0.85), .large])
         }
-        .sheet(isPresented: $showSettings) {
+        .sheet(isPresented: $viewModel.showSettings) {
             SettingsView()
         }
-        .sheet(isPresented: $showHistory) {
+        .sheet(isPresented: $viewModel.showHistory, onDismiss: {
+            viewModel.fetchData()
+        }) {
             TransactionHistoryView()
         }
-        .sheet(isPresented: $showMonthlyReview) {
+        .sheet(isPresented: $viewModel.showMonthlyReview, onDismiss: {
+            viewModel.fetchData()
+        }) {
             MonthlyReviewView()
+        }
+        .sheet(isPresented: $viewModel.showIOU) {
+            IOURecordView()
+        }
+        .sheet(isPresented: $viewModel.showBudgetConfig) {
+            NavigationStack {
+                BudgetConfigurationView()
+            }
+        }
+        .sheet(isPresented: $viewModel.showCategoryConfig) {
+            NavigationStack {
+                CategoryConfigurationView()
+            }
         }
         .onChange(of: deepLinkManager.selectedCategory) { oldValue, newValue in
             // ディープリンクで受け取ったカテゴリ名があれば、そのカテゴリ状態のまま入力モーダルを開く
             if let categoryName = newValue {
-                initialInputCategory = categoryName
-                showInputModal = true
+                viewModel.initialInputCategory = categoryName
+                viewModel.showInputModal = true
                 deepLinkManager.selectedCategory = nil // 消費したらリセット
             }
         }
@@ -231,95 +285,166 @@ struct DashboardView: View {
         }
         } // End of NavigationStack
     }
+}
+
+// MARK: - View Modifiers
+struct PulseAnimationModifier: ViewModifier {
+    @State private var isPulsing = false
     
-    private func setupMockDataIfNeeded() {
-        if budgets.isEmpty {
-            let mockBudget = Budget(month: Date(), totalAmount: 250000, spentAmount: 100000)
-            modelContext.insert(mockBudget)
-            
-            let cat1 = ItemCategory(name: "食費", totalAmount: 50000, spentAmount: 30000, orderIndex: 0)
-            let cat2 = ItemCategory(name: "交際費", totalAmount: 30000, spentAmount: 15000, orderIndex: 1)
-            let cat3 = ItemCategory(name: "変動費", totalAmount: 20000, spentAmount: 5000, orderIndex: 2)
-            let cat4 = ItemCategory(name: "変動費 A", totalAmount: 20000, spentAmount: 10000, orderIndex: 3)
-            let cat5 = ItemCategory(name: "変動費 B", totalAmount: 10000, spentAmount: 2000, orderIndex: 4)
-            let cat6 = ItemCategory(name: "変動費 C", totalAmount: 15000, spentAmount: 20000, orderIndex: 5)
-            
-            modelContext.insert(cat1)
-            modelContext.insert(cat2)
-            modelContext.insert(cat3)
-            modelContext.insert(cat4)
-            modelContext.insert(cat5)
-            modelContext.insert(cat6)
-        }
+    func body(content: Content) -> some View {
+        content
+            .opacity(isPulsing ? 0.6 : 1.0)
+            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isPulsing)
+            .onAppear {
+                isPulsing = true
+            }
+    }
+}
+
+extension View {
+    func pulseAnimation() -> some View {
+        self.modifier(PulseAnimationModifier())
+    }
+}
+
+// 押し込みアニメーション付きボタンスタイル
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
 // メインの巨大円形ゲージ
 struct BudgetGaugeView: View {
     var budget: Budget?
+    @State private var animatedRatio: Double = 0
     
     var body: some View {
         ZStack {
-            // 1周まるごとの「予算全体（緑）」
+            // 背景のグロー
             Circle()
-                .stroke(Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.3), style: StrokeStyle(lineWidth: 35, lineCap: .butt))
+                .fill(Color.black.opacity(0.2))
+                .blur(radius: 20)
+            
+            // 背景の円全体（ベース）
+            Circle()
+                .stroke(Color.white.opacity(0.05), style: StrokeStyle(lineWidth: 35, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
             
-            let spentRatio = budget != nil && budget!.totalAmount > 0 ? (budget!.spentAmount / budget!.totalAmount) : 0.4
+            let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 250000.0
+            let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 250000.0)
+            let displaySpent = (budget?.spentAmount ?? 100000.0) + fixedAndSavings
+            let spentRatio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.4
             let clampedRatio = min(max(spentRatio, 0), 1)
             
-            // 使用済み（赤）を0時の方向から右回りに上書きしていく
+            // 使用済み（オレンジ〜赤グラデーション）
             Circle()
-                .trim(from: 0, to: clampedRatio)
-                .stroke(Color(red: 0.9, green: 0.4, blue: 0.4), style: StrokeStyle(lineWidth: 35, lineCap: .butt))
+                .trim(from: 0, to: animatedRatio)
+                .stroke(
+                    AngularGradient(
+                        gradient: Gradient(colors: [Color.orange, Color.red]),
+                        center: .center,
+                        startAngle: .degrees(-90),
+                        endAngle: .degrees(270)
+                    ),
+                    style: StrokeStyle(lineWidth: 35, lineCap: .butt)
+                )
                 .rotationEffect(.degrees(-90))
+                .shadow(color: .red.opacity(clampedRatio > 0.8 ? 0.3 : 0), radius: 10)
             
             // 残高の緑ライン (赤の終点から1周の終わりまで)
-            Circle()
-                .trim(from: clampedRatio, to: 1)
-                .stroke(Color(red: 0.4, green: 0.9, blue: 0.6), style: StrokeStyle(lineWidth: 35, lineCap: .butt))
-                .rotationEffect(.degrees(-90))
+            if animatedRatio < 1.0 {
+                Circle()
+                    .trim(from: animatedRatio + 0.005, to: 1) // +0.005 for a tiny gap
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color(red: 0.2, green: 0.8, blue: 0.5), Color(red: 0.4, green: 0.9, blue: 0.6)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        style: StrokeStyle(lineWidth: 35, lineCap: .butt)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .shadow(color: Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.2), radius: 10)
+            }
             
-            // 中央空洞への情報表示（時計のアイコンの代わりに数字を入れる）
-            VStack(spacing: 5) {
-                Text("残額")
+            // 中央空洞への情報表示
+            VStack(spacing: 2) {
+                let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 250000.0
+                let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 250000.0)
+                let displaySpent = (budget?.spentAmount ?? 100000.0) + fixedAndSavings
+                let spentRatio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.4
+                
+                Text("手取り総額: ¥\(Int(displayTotal))")
                     .font(.caption2)
                     .fontWeight(.bold)
                     .foregroundColor(.gray)
+                    .padding(.bottom, 2)
                 
-                let remainingColor: Color = (spentRatio > 0.5) ? .yellow : Color(red: 0.4, green: 0.9, blue: 0.6)
+                Text("残額")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.gray)
+                
+                let remainingColor: Color = (spentRatio > 0.8) ? .red : ((spentRatio > 0.5) ? .yellow : .white)
                 
                 Text("¥\(Int(budget?.remainingAmount ?? 150000))")
-                    .font(.system(size: 28, weight: .black))
+                    .font(.system(size: 34, weight: .black, design: .rounded))
                     .foregroundColor(remainingColor)
+                    // グローエフェクト
+                    .shadow(color: remainingColor.opacity(0.5), radius: 5, x: 0, y: 0)
                 
                 Divider()
-                    .background(Color.gray.opacity(0.5))
-                    .frame(width: 100)
-                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.2))
+                    .frame(width: 120)
+                    .padding(.vertical, 8)
                 
-                Text("使用済")
+                Text("使用済(固定費込)")
                     .font(.caption2)
                     .fontWeight(.bold)
                     .foregroundColor(.gray)
                 
-                Text("¥\(Int(budget?.spentAmount ?? 100000))")
-                    .font(.system(size: 28, weight: .black))
-                    .foregroundColor(Color(red: 0.9, green: 0.4, blue: 0.4))
+                Text("¥\(Int(displaySpent))")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
                 
                 // 追加：詳細へ遷移できることを明示
-                HStack(spacing: 2) {
-                    Text("タップして詳細")
-                        .font(.system(size: 10))
+                HStack(spacing: 4) {
+                    Text("詳細")
+                        .font(.system(size: 11, weight: .semibold))
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 10))
+                        .font(.system(size: 10, weight: .bold))
                 }
                 .foregroundColor(.gray.opacity(0.8))
+                .padding(.top, 8)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.white.opacity(0.05))
+                .clipShape(Capsule())
                 .padding(.top, 5)
             }
         }
-        .frame(width: 250, height: 250)
-        .padding(.vertical, 20)
+        .frame(width: 260, height: 260)
+        .padding(.vertical, 10)
+        .onAppear {
+            updateRatio()
+        }
+        .onChange(of: budget?.spentAmount) { _, _ in
+            updateRatio()
+        }
+    }
+    
+    private func updateRatio() {
+        let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 250000.0
+        let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 250000.0)
+        let displaySpent = (budget?.spentAmount ?? 100000.0) + fixedAndSavings
+        let targetRatio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.4
+        let clampedTarget = min(max(targetRatio, 0), 1)
+        withAnimation(.spring(response: 1.0, dampingFraction: 0.8)) {
+            animatedRatio = clampedTarget
+        }
     }
 }
 
@@ -346,24 +471,37 @@ struct CategoryGaugeView: View {
     
     var body: some View {
         ZStack {
-            // 背景の円全体（緑）
+            // 背景の円全体（ベース）
             Circle()
-                .stroke(Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.3), lineWidth: 8)
+                .stroke(Color.white.opacity(0.05), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
             
             let clampedRatio = min(max(ratio, 0), 1)
             
-            // 使用済み（赤に統一）
+            // 使用済み（グラデーション）
             Circle()
                 .trim(from: 0, to: clampedRatio)
-                .stroke(Color(red: 0.9, green: 0.4, blue: 0.4), style: StrokeStyle(lineWidth: 8, lineCap: .butt)) // 一律で赤色に統一
+                .stroke(
+                    AngularGradient(
+                        gradient: Gradient(colors: [Color.orange, Color.red]),
+                        center: .center,
+                        startAngle: .degrees(-90),
+                        endAngle: .degrees(270)
+                    ),
+                    style: StrokeStyle(lineWidth: 8, lineCap: .butt)
+                )
                 .rotationEffect(.degrees(-90))
             
-            // 残金（緑）
-            Circle()
-                .trim(from: clampedRatio, to: 1)
-                .stroke(Color(red: 0.4, green: 0.9, blue: 0.6), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
-                .rotationEffect(.degrees(-90))
+            // 残金（緑グラデーション）
+            if clampedRatio < 1.0 {
+                Circle()
+                    .trim(from: clampedRatio + 0.05, to: 1) // slightly separate
+                    .stroke(
+                        LinearGradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.5), Color(red: 0.4, green: 0.9, blue: 0.6)], startPoint: .top, endPoint: .bottom),
+                        style: StrokeStyle(lineWidth: 8, lineCap: .butt)
+                    )
+                    .rotationEffect(.degrees(-90))
+            }
             
             VStack(spacing: 2) {
                 Text(name)
@@ -390,15 +528,11 @@ struct CategoryGaugeView: View {
 // MARK: - 全体予算詳細ビュー
 struct BudgetDetailView: View {
     var budget: Budget?
+    var recentTransactions: [TransactionDisplayItem]
+    var dailyTrends: [DailyBudgetTrend]
+    var onDelete: (IndexSet) -> Void
     
-    @State private var editingTransaction: DashboardTransactionMock? = nil
-    
-    // モックデータ: 直近の記録
-    let recentTransactions = [
-        DashboardTransactionMock(id: 1, category: "食費", date: "2026-03-01 19:30", amount: 1500),
-        DashboardTransactionMock(id: 2, category: "交際費", date: "2026-03-01 12:45", amount: 3500),
-        DashboardTransactionMock(id: 3, category: "変動費", date: "2026-03-02 08:15", amount: 500)
-    ]
+    @State private var editingTransaction: TransactionDisplayItem? = nil
     
     var body: some View {
         ZStack {
@@ -414,45 +548,138 @@ struct BudgetDetailView: View {
                             .font(.headline)
                             .foregroundColor(.gray)
                         
-                        // ここのグラフ等はモック
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(Color.white.opacity(0.05))
-                            .frame(height: 150)
-                            .overlay(Text("グラフ表示エリア").foregroundColor(.gray))
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("直近の記録")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        
-                        // 直近の記録をタップ可能にし、編集モーダルを呼び出す
-                        ForEach(recentTransactions) { tx in
-                            Button(action: {
-                                editingTransaction = tx
-                            }) {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(tx.category)
-                                            .foregroundColor(.white)
-                                        Text(tx.date)
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
+                        if let budget = budget {
+                            let total = budget.totalAmount
+                            let calendar = Calendar.current
+                            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: budget.month)) ?? Date()
+                            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1, hour: 23, minute: 59, second: 59), to: startOfMonth) ?? Date()
+                            
+                            VStack(spacing: 5) {
+                                if dailyTrends.isEmpty {
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .fill(Color.white.opacity(0.05))
+                                        .frame(height: 150)
+                                        .overlay(Text("データがありません").foregroundColor(.gray))
+                                } else {
+                                    Chart(dailyTrends) { trend in
+                                        // 支出額推移 (赤)
+                                        LineMark(
+                                            x: .value("日付", trend.date),
+                                            y: .value("金額", trend.spent)
+                                        )
+                                        .foregroundStyle(by: .value("データ", "累積支出"))
+                                        .lineStyle(StrokeStyle(lineWidth: 3))
+                                        
+                                        // 残り予算推移 (緑)
+                                        LineMark(
+                                            x: .value("日付", trend.date),
+                                            y: .value("金額", trend.remaining)
+                                        )
+                                        .foregroundStyle(by: .value("データ", "残り予算"))
+                                        .lineStyle(StrokeStyle(lineWidth: 3))
                                     }
-                                    Spacer()
-                                    Text("-¥\(tx.amount)")
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
+                                    .chartForegroundStyleScale([
+                                        "残り予算": Color(red: 0.4, green: 0.9, blue: 0.6),
+                                        "累積支出": Color(red: 0.9, green: 0.4, blue: 0.4)
+                                    ])
+                                    .chartLegend(position: .top, alignment: .trailing)
+                                    .chartXScale(domain: startOfMonth...endOfMonth)
+                                    .chartXAxis {
+                                        AxisMarks(values: .stride(by: .day, count: 5)) { value in
+                                            AxisGridLine().foregroundStyle(.gray.opacity(0.3))
+                                            AxisTick().foregroundStyle(.gray)
+                                            AxisValueLabel(format: .dateTime.month(.defaultDigits).day(), centered: true)
+                                                .foregroundStyle(.gray)
+                                        }
+                                    }
+                                    .chartYAxis {
+                                        AxisMarks(position: .leading) { value in
+                                            AxisGridLine().foregroundStyle(.gray.opacity(0.3))
+                                            AxisValueLabel()
+                                                .foregroundStyle(.gray)
+                                        }
+                                    }
+                                    .frame(height: 180)
+                                    .padding(.top, 10)
                                 }
-                                .padding()
-                                .background(Color.white.opacity(0.05))
-                                .cornerRadius(10)
+                                
+                                // 臨時収入が合算されていることを示すテキスト
+                                HStack {
+                                    Spacer()
+                                    Text("※ 臨時収入は手取り予算として合算されています [ 総枠: ¥\(Int(total)) ]")
+                                        .font(.caption2)
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.top, 4)
                             }
-                            .buttonStyle(PlainButtonStyle())
+                        } else {
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(Color.white.opacity(0.05))
+                                .frame(height: 60)
+                                .overlay(Text("データがありません").foregroundColor(.gray))
                         }
                     }
                     .padding(.horizontal, 20)
+                    
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("直近の記録 (最大100件)")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                            .padding(.horizontal, 20)
+                        
+                        if recentTransactions.isEmpty {
+                            Text("最近の記録はありません")
+                                .foregroundColor(.gray)
+                                .padding(.horizontal, 20)
+                        } else {
+                            if recentTransactions.count > 5 {
+                                Text("↓ さらに履歴を見るには下にスクロール")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                                    .padding(.horizontal, 20)
+                                    .padding(.bottom, 5)
+                            }
+                            
+                            // ScrollViewの中にListを入れるとバグになるため、固定高で擬似Listを作る
+                            List {
+                                ForEach(recentTransactions) { tx in
+                                    Button(action: {
+                                        if !tx.isFixedCost {
+                                            editingTransaction = tx
+                                        }
+                                    }) {
+                                        HStack {
+                                            VStack(alignment: .leading) {
+                                                HStack(spacing: 4) {
+                                                    Text(tx.category)
+                                                        .foregroundColor(.white)
+                                                    if tx.isFixedCost {
+                                                        Image(systemName: "lock.fill")
+                                                            .font(.caption2)
+                                                            .foregroundColor(.gray)
+                                                    }
+                                                }
+                                                Text(tx.date)
+                                                    .font(.caption)
+                                                    .foregroundColor(.gray)
+                                            }
+                                            Spacer()
+                                            Text(tx.isIncome ? "+¥\(tx.totalAmount)" : "-¥\(tx.personalAmount)")
+                                                .fontWeight(.bold)
+                                                .foregroundColor(tx.isIncome ? Color(red: 0.4, green: 0.9, blue: 0.6) : .white)
+                                        }
+                                        .padding(.vertical, 8)
+                                    }
+                                    .listRowBackground(Color.white.opacity(0.05))
+                                    .deleteDisabled(tx.isFixedCost)
+                                }
+                                .onDelete(perform: onDelete)
+                            }
+                            .listStyle(.plain)
+                            .frame(height: CGFloat(recentTransactions.count * 60) + 20) // 簡易的な高さ計算
+                            .scrollDisabled(true) // 外側のScrollViewに任せる
+                        }
+                    }
                     
                     Spacer(minLength: 50)
                 }
@@ -461,18 +688,16 @@ struct BudgetDetailView: View {
         .navigationTitle("今月の全体予算")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $editingTransaction) { tx in
-            QuickInputModalView(initialCategoryName: tx.category)
-                .presentationDetents([.fraction(0.85), .large])
+            QuickInputModalView(
+                initialCategoryName: tx.isIncome ? nil : tx.category,
+                editingTransactionId: tx.id,
+                initialAmount: "\(tx.totalAmount)",
+                isIncome: tx.isIncome,
+                isIOU: tx.iouAmount > 0
+            )
+            .presentationDetents([.fraction(0.85), .large])
         }
     }
-}
-
-// ダッシュボード用・直近履歴モック構造体
-struct DashboardTransactionMock: Identifiable {
-    let id: Int
-    let category: String
-    let date: String
-    let amount: Int
 }
 
 // MARK: - サイドメニュービュー
@@ -480,6 +705,9 @@ struct SideMenuView: View {
     @Binding var showHistory: Bool
     @Binding var showSettings: Bool
     @Binding var showMonthlyReview: Bool
+    @Binding var showIOU: Bool
+    @Binding var showBudgetConfig: Bool // 追加
+    @Binding var showCategoryConfig: Bool // 追加
     @Binding var showSideMenu: Bool
     
     var body: some View {
@@ -499,12 +727,28 @@ struct SideMenuView: View {
                         showSideMenu = false
                         showMonthlyReview = true
                     }
+                    MenuButton(icon: "person.2.circle.fill", title: "立替リスト", color: .orange) {
+                        showSideMenu = false
+                        showIOU = true
+                    }
                     MenuButton(icon: "clock.arrow.circlepath", title: "支出履歴", color: .white) {
                         showSideMenu = false
                         showHistory = true
                     }
                     Divider().background(Color.white.opacity(0.3))
-                    MenuButton(icon: "gearshape.fill", title: "設定", color: .white) {
+                    Group {
+                        Text("家計設定").font(.caption).foregroundColor(.gray)
+                        MenuButton(icon: "dollarsign.circle.fill", title: "予算・貯金の設定", color: .green) {
+                            showSideMenu = false
+                            showBudgetConfig = true
+                        }
+                        MenuButton(icon: "list.bullet.circle.fill", title: "カテゴリの編集", color: .cyan) {
+                            showSideMenu = false
+                            showCategoryConfig = true
+                        }
+                    }
+                    Divider().background(Color.white.opacity(0.3))
+                    MenuButton(icon: "gearshape.fill", title: "アプリ設定", color: .white) {
                         showSideMenu = false
                         showSettings = true
                     }
@@ -524,7 +768,11 @@ private struct MenuButton: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            action()
+        }) {
             HStack(spacing: 15) {
                 Image(systemName: icon)
                     .font(.title2)
