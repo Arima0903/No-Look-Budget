@@ -52,11 +52,18 @@ class DashboardViewModel: ObservableObject {
         let calendar = Calendar.current
         let currentYearMonth = calendar.dateComponents([.year, .month], from: Date())
         
-        // 当月の予算データを優先的に取得し、見つからなければ最新のものを使用する
-        self.currentBudget = budgets.first(where: {
+        // 当月の予算データを優先的に取得し、見つからなければ作成する
+        if let current = budgets.first(where: {
             let bComponents = calendar.dateComponents([.year, .month], from: $0.month)
             return bComponents.year == currentYearMonth.year && bComponents.month == currentYearMonth.month
-        }) ?? budgets.first
+        }) {
+            self.currentBudget = current
+        } else {
+            let newBudget = Budget(month: Date(), totalAmount: 0, spentAmount: 0)
+            context.insert(newBudget)
+            try? context.save()
+            self.currentBudget = newBudget
+        }
         
         let catDesc = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])
         self.categories = (try? context.fetch(catDesc)) ?? []
