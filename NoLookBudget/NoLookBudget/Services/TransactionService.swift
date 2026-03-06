@@ -20,6 +20,19 @@ class TransactionService: TransactionServiceProtocol {
         self.context = context
     }
     
+    // 現在の年月に対応する予算レコードを取得するヘルパー
+    private func getCurrentMonthBudget() -> Budget? {
+        let descriptor = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
+        let budgets = (try? context.fetch(descriptor)) ?? []
+        let calendar = Calendar.current
+        let currentYearMonth = calendar.dateComponents([.year, .month], from: Date())
+        
+        return budgets.first(where: {
+            let bComponents = calendar.dateComponents([.year, .month], from: $0.month)
+            return bComponents.year == currentYearMonth.year && bComponents.month == currentYearMonth.month
+        }) ?? budgets.first
+    }
+    
     // 支出または立替を追加する
     func addExpense(amount: Double, category: ItemCategory?, isIOU: Bool) throws {
         guard amount > 0 else { return }
@@ -41,8 +54,7 @@ class TransactionService: TransactionServiceProtocol {
             }
             
             // カテゴリの有無に関わらず、全体予算（Budget）の使用済み金額にも加算する
-            let descriptor = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
-            if let budget = try context.fetch(descriptor).first {
+            if let budget = getCurrentMonthBudget() {
                 budget.spentAmount += amount
             }
         }
@@ -57,8 +69,7 @@ class TransactionService: TransactionServiceProtocol {
         
         let transaction = ExpenseTransaction(date: Date(), amount: amount, categoryId: nil, isIOU: false, isIncome: true)
         context.insert(transaction)
-        let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
-        if let budget = try? context.fetch(budgetDesc).first {
+        if let budget = getCurrentMonthBudget() {
             budget.totalAmount += amount
         }
         
@@ -68,8 +79,7 @@ class TransactionService: TransactionServiceProtocol {
     
     // 月跨ぎの処理（借金の繰り越し等）
     func processMonthlyReview(currentDate: Date) throws {
-        let descriptor = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
-        guard let currentBudget = try context.fetch(descriptor).first else { return }
+        guard let currentBudget = getCurrentMonthBudget() else { return }
         
         // オーバーした分（借金）を計算
         let overAmount = currentBudget.spentAmount - currentBudget.totalAmount
@@ -117,8 +127,7 @@ class TransactionService: TransactionServiceProtocol {
         
         if !oldIsIOU {
             // 旧が通常支出の場合のみ、Budget・Categoryから差し戻す
-            let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
-            if let budget = try? context.fetch(budgetDesc).first {
+            if let budget = getCurrentMonthBudget() {
                 budget.spentAmount = max(0, budget.spentAmount - oldAmount)
             }
             
@@ -138,8 +147,7 @@ class TransactionService: TransactionServiceProtocol {
         
         if !isIOU {
             // 新が通常支出の場合のみ、Budget・Categoryに加算
-            let budgetDesc2 = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
-            if let budget = try? context.fetch(budgetDesc2).first {
+            if let budget = getCurrentMonthBudget() {
                 budget.spentAmount += amount
             }
             
@@ -161,8 +169,7 @@ class TransactionService: TransactionServiceProtocol {
         transaction.amount = amount
         transaction.isIncome = true
         
-        let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
-        if let budget = try? context.fetch(budgetDesc).first {
+        if let budget = getCurrentMonthBudget() {
             budget.totalAmount += diff
         }
         
@@ -178,14 +185,12 @@ class TransactionService: TransactionServiceProtocol {
         let amount = transaction.amount
         
         if transaction.isIncome {
-            let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
-            if let budget = try? context.fetch(budgetDesc).first {
+            if let budget = getCurrentMonthBudget() {
                 budget.totalAmount = max(0, budget.totalAmount - amount)
             }
         } else if !transaction.isIOU {
             // 通常支出の場合のみ予算を復元する（立替は予算に影響していないため復元不要）
-            let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
-            if let budget = try? context.fetch(budgetDesc).first {
+            if let budget = getCurrentMonthBudget() {
                 budget.spentAmount = max(0, budget.spentAmount - amount)
             }
             if let catId = transaction.categoryId {
