@@ -15,7 +15,7 @@ struct NoLookBudgetApp: App {
                     deepLinkManager.handleURL(url)
                 }
         }
-        .modelContainer(for: [Budget.self, ItemCategory.self, IOURecord.self, ExpenseTransaction.self])
+        .modelContainer(SharedModelContainer.shared)
     }
 }
 

@@ -1,22 +1,43 @@
 import SwiftUI
 import SwiftData
 
+enum QuickInputMode {
+    case expense
+    case income
+}
+
 struct QuickInputModalView: View {
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \ItemCategory.orderIndex) private var categories: [ItemCategory]
+    @StateObject private var viewModel: QuickInputViewModel
     
-    // ウィジェットからの遷移時に初期選択されるカテゴリ名
-    var initialCategoryName: String?
-    
-    @State private var selectedCategory: ItemCategory?
-    @State private var expressionText: String = "0"
+    init(initialCategoryName: String? = nil, editingTransactionId: UUID? = nil, initialAmount: String = "0", isIncome: Bool = false, isIOU: Bool = false) {
+        _viewModel = StateObject(wrappedValue: QuickInputViewModel(
+            initialCategoryName: initialCategoryName,
+            editingTransactionId: editingTransactionId,
+            initialAmount: initialAmount,
+            isIncome: isIncome,
+            isIOU: isIOU
+        ))
+    }
     
     let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
     
     var body: some View {
         ZStack {
-            Color(red: 0.15, green: 0.15, blue: 0.16).ignoresSafeArea()
+            // 背景（すりガラス効果 + ダークベース）
+            Color(red: 0.1, green: 0.1, blue: 0.12).ignoresSafeArea()
+            
+            // 立替モード時は背景にオレンジの微かなグローを追加
+            if viewModel.isIOUMode {
+                RadialGradient(
+                    gradient: Gradient(colors: [Color.orange.opacity(0.15), Color.clear]),
+                    center: .bottom,
+                    startRadius: 50,
+                    endRadius: 500
+                )
+                .ignoresSafeArea()
+                .transition(.opacity)
+            }
             
             VStack(spacing: 20) {
                 // Handle for modal
@@ -25,117 +46,251 @@ struct QuickInputModalView: View {
                     .frame(width: 40, height: 5)
                     .padding(.top, 10)
                 
-                // ヘッダー部（閉じるボタン）
+                // ヘッダー部（閉じるボタン + モード切替 + 立替トグル）
                 HStack {
                     Button(action: {
                         dismiss()
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title2)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.gray.opacity(0.8))
                     }
+                    
                     Spacer()
+                    
+                    // 支出・収入のセグメント切替
+                    Picker("入力モード", selection: $viewModel.inputMode.animation(.spring())) {
+                        Text("支出").tag(QuickInputMode.expense)
+                        Text("臨時収入").tag(QuickInputMode.income)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 150)
+                    
+                    Spacer()
+                    
+                    // 立替セパレーター (入力モードが支出の時のみ)
+                    if viewModel.inputMode == .expense {
+                        HStack(spacing: 8) {
+                            Text("立替")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(viewModel.isIOUMode ? .orange : .gray)
+                            
+                            Toggle("", isOn: $viewModel.isIOUMode.animation(.spring(response: 0.3, dampingFraction: 0.7)))
+                                .labelsHidden()
+                                .tint(.orange)
+                                .onChange(of: viewModel.isIOUMode) { oldValue, newValue in
+                                    let generator = UIImpactFeedbackGenerator(style: .light)
+                                    generator.impactOccurred()
+                                }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(20)
+                        .shadow(color: viewModel.isIOUMode ? Color.orange.opacity(0.3) : .clear, radius: 8, x: 0, y: 0)
+                    } else {
+                        // スペースのバランスを取るためのダミー
+                        Color.clear.frame(width: 70, height: 30)
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
                 
                 // 入力金額表示 (上部)
-                VStack(alignment: .trailing, spacing: 5) {
-                    Text(expressionText)
-                        .font(.system(size: 50, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                    
-                    if let result = calculateResult(), result != expressionText {
-                        Text("= ¥\(result)")
-                            .font(.title3)
-                            .foregroundColor(.gray)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                
-                // 予算項目一覧 (中段: 2行3列)
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("予算項目を選択")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                        .padding(.horizontal, 20)
-                    
-                    LazyVGrid(columns: columns, spacing: 10) {
-                        ForEach(categories) { category in
-                            CategorySelectButton(
-                                title: category.name,
-                                isSelected: selectedCategory?.id == category.id
-                            ) {
-                                selectedCategory = category
+                if viewModel.inputMode == .expense && viewModel.isIOUMode {
+                    // 2段入力UI
+                    VStack(spacing: 10) {
+                        // 立替分枠
+                        Button(action: {
+                            let generator = UISelectionFeedbackGenerator()
+                            generator.selectionChanged()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                viewModel.currentFocus = .iou
                             }
+                        }) {
+                            HStack {
+                                Text("みんなの立替分")
+                                    .font(.subheadline).bold()
+                                    .foregroundColor(viewModel.currentFocus == .iou ? .orange : .gray)
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text(viewModel.iouExpression)
+                                        .font(.system(size: 36, weight: .black, design: .rounded))
+                                        .foregroundColor(viewModel.currentFocus == .iou ? .orange : .gray.opacity(0.5))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.4)
+                                    if let res = viewModel.calculateResult(for: viewModel.iouExpression), res != viewModel.iouExpression {
+                                        Text("= ¥\(res)")
+                                            .font(.caption.bold())
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 8)
+                            .background(RoundedRectangle(cornerRadius: 15).fill(Color.white.opacity(viewModel.currentFocus == .iou ? 0.08 : 0.02)))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(viewModel.currentFocus == .iou ? Color.orange.opacity(0.5) : Color.clear, lineWidth: 2)
+                            )
+                        }
+                        
+                        // 自分の支出枠
+                        Button(action: {
+                            let generator = UISelectionFeedbackGenerator()
+                            generator.selectionChanged()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                viewModel.currentFocus = .myExpense
+                            }
+                        }) {
+                            HStack {
+                                Text("自分自身の支出")
+                                    .font(.subheadline).bold()
+                                    .foregroundColor(viewModel.currentFocus == .myExpense ? .white : .gray)
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text(viewModel.myExpenseExpression)
+                                        .font(.system(size: 36, weight: .black, design: .rounded))
+                                        .foregroundColor(viewModel.currentFocus == .myExpense ? .white : .gray.opacity(0.5))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.4)
+                                    if let res = viewModel.calculateResult(for: viewModel.myExpenseExpression), res != viewModel.myExpenseExpression {
+                                        Text("= ¥\(res)")
+                                            .font(.caption.bold())
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 8)
+                            .background(RoundedRectangle(cornerRadius: 15).fill(Color.white.opacity(viewModel.currentFocus == .myExpense ? 0.08 : 0.02)))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(viewModel.currentFocus == .myExpense ? Color.white.opacity(0.5) : Color.clear, lineWidth: 2)
+                            )
                         }
                     }
                     .padding(.horizontal, 20)
+                    .padding(.vertical, 5)
+                } else {
+                    // 通常の1段入力
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(viewModel.expressionText)
+                            .font(.system(size: 60, weight: .black, design: .rounded))
+                            .foregroundColor(viewModel.inputMode == .income ? Color(red: 0.4, green: 0.9, blue: 0.6) : .white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .contentTransition(.numericText(value: Double(viewModel.expressionText) ?? 0))
+                            .animation(.spring(), value: viewModel.expressionText)
+                        
+                        if let result = viewModel.calculateResult(), result != viewModel.expressionText {
+                            Text("= ¥\(result)")
+                                .font(.title3.bold())
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 5)
+                }
+                
+                // 予算項目一覧 (中段: 2行3列)
+                VStack(alignment: .leading, spacing: 10) {
+                    if viewModel.inputMode == .income {
+                        Text("収入の種類を選択")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color(red: 0.4, green: 0.9, blue: 0.6))
+                            .padding(.horizontal, 20)
+                            
+                        let incomeTypes = ["給与", "賞与", "副業", "投資", "お小遣い", "その他"]
+                        LazyVGrid(columns: columns, spacing: 10) {
+                            ForEach(incomeTypes, id: \.self) { type in
+                                CategorySelectButton(
+                                    title: type,
+                                    isSelected: viewModel.selectedIncomeCategory == type,
+                                    isIOUMode: false
+                                ) {
+                                    let generator = UIImpactFeedbackGenerator(style: .light)
+                                    generator.impactOccurred()
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        viewModel.selectedIncomeCategory = type
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    } else {
+                        Text(viewModel.isIOUMode ? "対象のカテゴリ (立替用)" : "予算項目を選択")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.gray)
+                            .padding(.horizontal, 20)
+                        
+                        LazyVGrid(columns: columns, spacing: 10) {
+                            ForEach(viewModel.categories) { category in
+                                CategorySelectButton(
+                                    title: category.name,
+                                    isSelected: viewModel.selectedCategory?.id == category.id,
+                                    isIOUMode: viewModel.isIOUMode
+                                ) {
+                                    let generator = UIImpactFeedbackGenerator(style: .light)
+                                    generator.impactOccurred()
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        viewModel.selectedCategory = category
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
                 }
                 
                 Spacer(minLength: 10)
                 
                 // 電卓キーパッド (下部)
-                CalculatorKeypad(expressionText: $expressionText, onCommit: logExpense)
+                let activeBinding = Binding<String>(
+                    get: {
+                        if viewModel.inputMode == .expense && viewModel.isIOUMode {
+                            return viewModel.currentFocus == .iou ? viewModel.iouExpression : viewModel.myExpenseExpression
+                        }
+                        return viewModel.expressionText
+                    },
+                    set: { newValue in
+                        if viewModel.inputMode == .expense && viewModel.isIOUMode {
+                            if viewModel.currentFocus == .iou {
+                                viewModel.iouExpression = newValue
+                            } else {
+                                viewModel.myExpenseExpression = newValue
+                            }
+                        } else {
+                            viewModel.expressionText = newValue
+                        }
+                    }
+                )
+                
+                CalculatorKeypad(expressionText: activeBinding, inputMode: viewModel.inputMode, isIOUMode: viewModel.isIOUMode, isEditing: viewModel.editingTransactionId != nil, onCommit: submitExpense)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
+                    .alert(isPresented: $viewModel.showAlert) {
+                        Alert(
+                            title: Text("入力エラー"),
+                            message: Text(viewModel.alertMessage ?? ""),
+                            dismissButton: .default(Text("OK"))
+                        )
+                    }
             }
         }
         .onAppear {
-            // 初期表示時のカテゴリ自動選択
-            if let initialName = initialCategoryName,
-               let targetCategory = categories.first(where: { $0.name == initialName }) {
-                selectedCategory = targetCategory
-            } else {
-                selectedCategory = categories.first
-            }
+            // fetchDataはViewModelのinit等で呼ばれる想定
         }
     }
     
-    // --- 電卓の計算ロジック ---
-    private func calculateResult() -> String? {
-        let expression = expressionText
-            .replacingOccurrences(of: "×", with: "*")
-            .replacingOccurrences(of: "÷", with: "/")
-            .replacingOccurrences(of: "％", with: "/100")
-        
-        let validChars = CharacterSet(charactersIn: "0123456789+-*/.() ")
-        if expression.rangeOfCharacter(from: validChars.inverted) != nil {
-            return nil
+    private func submitExpense() {
+        if viewModel.logExpense() {
+            dismiss()
         }
-        
-        let nsExpr = NSExpression(format: expression)
-        if let result = nsExpr.expressionValue(with: nil, context: nil) as? NSNumber {
-            let intValue = result.intValue
-            return intValue >= 0 ? "\(intValue)" : "0"
-        }
-        return nil
-    }
-    
-    private func logExpense() {
-        guard let finalResultString = calculateResult(),
-              let amount = Double(finalResultString), amount > 0 else { return }
-        
-        // 選択されたカテゴリの残高を減らす
-        if let category = selectedCategory {
-            category.spentAmount += amount
-        }
-        
-        // トランザクション履歴として保存
-        let newTransaction = ExpenseTransaction(amount: amount, isIOU: false)
-        modelContext.insert(newTransaction)
-        
-        // （MVP仕様: 全体予算とカテゴリは連動している前提で、全体予算も減らす場合はここで処理）
-        
-        // Haptic Feedback
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-        
-        dismiss()
     }
 }
 
@@ -144,25 +299,47 @@ struct QuickInputModalView: View {
 struct CategorySelectButton: View {
     let title: String
     let isSelected: Bool
+    let isIOUMode: Bool // 追加
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 14, weight: .bold))
-                .foregroundColor(isSelected ? .black : .white)
+                .foregroundColor(isSelected ? (isIOUMode ? .white : .black) : .white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(isSelected ? Color.yellow : Color.gray.opacity(0.3))
-                .cornerRadius(10)
+                .background(
+                    ZStack {
+                        if isSelected {
+                            if isIOUMode {
+                                LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            } else {
+                                LinearGradient(colors: [Color(red: 0.4, green: 0.9, blue: 0.6), Color(red: 0.2, green: 0.8, blue: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            }
+                        } else {
+                            Rectangle().fill(.ultraThinMaterial)
+                        }
+                    }
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isSelected ? Color.clear : Color.white.opacity(0.1), lineWidth: 1)
+                )
+                .cornerRadius(12)
+                .shadow(color: isSelected ? (isIOUMode ? .orange.opacity(0.4) : Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.4)) : .clear, radius: 8, x: 0, y: 4)
         }
+        .buttonStyle(ScaleButtonStyle())
     }
 }
 
 // --- 電卓のキーパッド部品 ---
 struct CalculatorKeypad: View {
     @Binding var expressionText: String
-    let onCommit: () -> Void // 確定ボタン用
+    var inputMode: QuickInputMode
+    var isIOUMode: Bool
+    var isEditing: Bool
+    let onCommit: () -> Void
     
     let buttons: [[String]] = [
         ["C", "％", "÷", "⌫"],
@@ -178,34 +355,56 @@ struct CalculatorKeypad: View {
                 HStack(spacing: 12) {
                     ForEach(row, id: \.self) { btn in
                         Button(action: {
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.impactOccurred()
                             handleButtonTap(btn)
                         }) {
-                            Text(btn == "=" ? "使う" : btn)
-                                .font(.system(size: btn == "=" ? 18 : 24, weight: .bold, design: .rounded))
+                            Text(btn == "=" ? (isEditing ? "更新" : (inputMode == .income ? "追加" : (isIOUMode ? "立替" : "使う"))) : btn)
+                                .font(.system(size: btn == "=" ? 20 : 26, weight: .bold, design: .rounded))
                                 .foregroundColor(foregroundColor(for: btn))
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .aspectRatio(1, contentMode: .fit) // 正方形に近づける
-                                .background(backgroundColor(for: btn))
+                                .background(backgroundView(for: btn))
                                 .clipShape(Circle())
+                                .shadow(color: shadowColor(for: btn), radius: btn == "=" ? 10 : 0, x: 0, y: btn == "=" ? 5 : 0)
                         }
+                        .buttonStyle(ScaleButtonStyle())
                     }
                 }
             }
         }
     }
     
-    private func backgroundColor(for button: String) -> Color {
+    @ViewBuilder
+    private func backgroundView(for button: String) -> some View {
         switch button {
-        case "C", "⌫": return Color.gray.opacity(0.5)
-        case "％", "÷", "×", "-", "+": return Color.gray.opacity(0.4) // 赤(オレンジ)からダークテーマに合わせた色へ変更
-        case "=": return Color(red: 0.4, green: 0.9, blue: 0.6) // 使うボタン
-        default: return Color.white.opacity(0.15) // 数字キー
+        case "C", "⌫":
+            Color.white.opacity(0.1)
+        case "％", "÷", "×", "-", "+":
+            Color.white.opacity(0.15)
+        case "=":
+            if inputMode == .income {
+                LinearGradient(colors: [Color(red: 0.4, green: 0.9, blue: 0.6), Color(red: 0.2, green: 0.8, blue: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            } else if isIOUMode {
+                LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing)
+            } else {
+                LinearGradient(colors: [Color(red: 0.4, green: 0.9, blue: 0.6), Color(red: 0.2, green: 0.8, blue: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            }
+        default:
+            Rectangle().fill(.ultraThinMaterial)
         }
+    }
+    
+    private func shadowColor(for button: String) -> Color {
+        if button == "=" {
+            return (inputMode == .income || !isIOUMode) ? Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.4) : Color.orange.opacity(0.4)
+        }
+        return .clear
     }
     
     private func foregroundColor(for button: String) -> Color {
         switch button {
-        case "=": return .black // 使うボタンの文字色
+        case "=": return (inputMode == .income || isIOUMode) ? .white : .black
+        case "C", "⌫", "％", "÷", "×", "-", "+": return .gray
         default: return .white
         }
     }
@@ -215,23 +414,39 @@ struct CalculatorKeypad: View {
         
         switch btn {
         case "C":
-            expressionText = "0"
-        case "⌫":
-            if expressionText.count > 1 {
-                expressionText.removeLast()
-            } else {
+            withAnimation(.spring()) {
                 expressionText = "0"
+            }
+        case "⌫":
+            var nextText = expressionText
+            if nextText.count > 1 {
+                nextText.removeLast()
+            } else {
+                nextText = "0"
+            }
+            withAnimation(.spring()) {
+                expressionText = nextText
             }
         case "=":
             onCommit()
         default:
-            if expressionText == "0" && !isOperator {
-                expressionText = btn
+            var nextText = expressionText
+            if nextText == "0" && !isOperator {
+                nextText = btn
             } else {
-                // 長すぎる入力を防ぐ
-                if expressionText.count < 15 {
-                    expressionText.append(btn)
+                // 演算子の連続入力を防ぐ（最後が演算子なら置き換える）
+                if isOperator {
+                    if let last = nextText.last, ["+", "-", "×", "÷", "％", "."].contains(String(last)) {
+                        nextText.removeLast()
+                    }
                 }
+                // 長すぎる入力を防ぐ
+                if nextText.count < 15 {
+                    nextText.append(btn)
+                }
+            }
+            withAnimation(.spring()) {
+                expressionText = nextText
             }
         }
     }

@@ -20,6 +20,13 @@
 			remoteGlobalIDString = 729484032F522AB5009C212A;
 			remoteInfo = NoLookBudgetWidgetExtension;
 		};
+		72A19EBF2F58A1C8005F04F0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 729483962F521118009C212A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7294839D2F521118009C212A;
+			remoteInfo = NoLookBudget;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -41,6 +48,8 @@
 		729484042F522AB5009C212A /* NoLookBudgetWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NoLookBudgetWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		729484062F522AB5009C212A /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		729484082F522AB5009C212A /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		72A19EB62F589FEA005F04F0 /* NoLookBudgetWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NoLookBudgetWidgetExtension.entitlements; sourceTree = "<group>"; };
+		72A19EBB2F58A1C8005F04F0 /* NoLookBudgetTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoLookBudgetTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -51,11 +60,26 @@
 			);
 			target = 729484032F522AB5009C212A /* NoLookBudgetWidgetExtension */;
 		};
+		72A19ECE2F58A712005F04F0 /* Exceptions for "NoLookBudget" folder in "NoLookBudgetWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/Budget.swift,
+				Models/ExpenseTransaction.swift,
+				Models/IOURecord.swift,
+				Models/ItemCategory.swift,
+				Models/SharedModelContainer.swift,
+				Services/TransactionService.swift,
+			);
+			target = 729484032F522AB5009C212A /* NoLookBudgetWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		729483A02F521118009C212A /* NoLookBudget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				72A19ECE2F58A712005F04F0 /* Exceptions for "NoLookBudget" folder in "NoLookBudgetWidgetExtension" target */,
+			);
 			path = NoLookBudget;
 			sourceTree = "<group>";
 		};
@@ -65,6 +89,11 @@
 				729484172F522AB7009C212A /* Exceptions for "NoLookBudgetWidget" folder in "NoLookBudgetWidgetExtension" target */,
 			);
 			path = NoLookBudgetWidget;
+			sourceTree = "<group>";
+		};
+		72A19EBC2F58A1C8005F04F0 /* NoLookBudgetTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = NoLookBudgetTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -86,14 +115,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		72A19EB82F58A1C8005F04F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		729483952F521118009C212A = {
 			isa = PBXGroup;
 			children = (
+				72A19EB62F589FEA005F04F0 /* NoLookBudgetWidgetExtension.entitlements */,
 				729483A02F521118009C212A /* NoLookBudget */,
 				7294840A2F522AB5009C212A /* NoLookBudgetWidget */,
+				72A19EBC2F58A1C8005F04F0 /* NoLookBudgetTests */,
 				729484052F522AB5009C212A /* Frameworks */,
 				7294839F2F521118009C212A /* Products */,
 			);
@@ -104,6 +142,7 @@
 			children = (
 				7294839E2F521118009C212A /* NoLookBudget.app */,
 				729484042F522AB5009C212A /* NoLookBudgetWidgetExtension.appex */,
+				72A19EBB2F58A1C8005F04F0 /* NoLookBudgetTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -166,6 +205,29 @@
 			productReference = 729484042F522AB5009C212A /* NoLookBudgetWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		72A19EBA2F58A1C8005F04F0 /* NoLookBudgetTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 72A19EC12F58A1C8005F04F0 /* Build configuration list for PBXNativeTarget "NoLookBudgetTests" */;
+			buildPhases = (
+				72A19EB72F58A1C8005F04F0 /* Sources */,
+				72A19EB82F58A1C8005F04F0 /* Frameworks */,
+				72A19EB92F58A1C8005F04F0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				72A19EC02F58A1C8005F04F0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				72A19EBC2F58A1C8005F04F0 /* NoLookBudgetTests */,
+			);
+			name = NoLookBudgetTests;
+			packageProductDependencies = (
+			);
+			productName = NoLookBudgetTests;
+			productReference = 72A19EBB2F58A1C8005F04F0 /* NoLookBudgetTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -181,6 +243,10 @@
 					};
 					729484032F522AB5009C212A = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					72A19EBA2F58A1C8005F04F0 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 7294839D2F521118009C212A;
 					};
 				};
 			};
@@ -200,6 +266,7 @@
 			targets = (
 				7294839D2F521118009C212A /* NoLookBudget */,
 				729484032F522AB5009C212A /* NoLookBudgetWidgetExtension */,
+				72A19EBA2F58A1C8005F04F0 /* NoLookBudgetTests */,
 			);
 		};
 /* End PBXProject section */
@@ -213,6 +280,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		729484022F522AB5009C212A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		72A19EB92F58A1C8005F04F0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -236,6 +310,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		72A19EB72F58A1C8005F04F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -243,6 +324,11 @@
 			isa = PBXTargetDependency;
 			target = 729484032F522AB5009C212A /* NoLookBudgetWidgetExtension */;
 			targetProxy = 729484142F522AB7009C212A /* PBXContainerItemProxy */;
+		};
+		72A19EC02F58A1C8005F04F0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7294839D2F521118009C212A /* NoLookBudget */;
+			targetProxy = 72A19EBF2F58A1C8005F04F0 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -371,8 +457,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = NoLookBudget/NoLookBudget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SR4K79A5H5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -385,7 +473,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.koji.NoLookBudget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arima0903.NoLookBudget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -402,8 +490,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = NoLookBudget/NoLookBudget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SR4K79A5H5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -416,7 +506,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.koji.NoLookBudget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arima0903.NoLookBudget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -433,8 +523,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = NoLookBudgetWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SR4K79A5H5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NoLookBudgetWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NoLookBudgetWidget;
@@ -445,7 +537,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.koji.NoLookBudget.NoLookBudgetWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.arima0903.NoLookBudget.NoLookBudgetWidget-";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -462,8 +554,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = NoLookBudgetWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SR4K79A5H5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NoLookBudgetWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NoLookBudgetWidget;
@@ -474,7 +568,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.koji.NoLookBudget.NoLookBudgetWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.arima0903.NoLookBudget.NoLookBudgetWidget-";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -483,6 +577,48 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		72A19EC22F58A1C8005F04F0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SR4K79A5H5;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.koji.NoLookBudgetTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NoLookBudget.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NoLookBudget";
+			};
+			name = Debug;
+		};
+		72A19EC32F58A1C8005F04F0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SR4K79A5H5;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.koji.NoLookBudgetTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NoLookBudget.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NoLookBudget";
 			};
 			name = Release;
 		};
@@ -512,6 +648,15 @@
 			buildConfigurations = (
 				729484192F522AB7009C212A /* Debug */,
 				7294841A2F522AB7009C212A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		72A19EC12F58A1C8005F04F0 /* Build configuration list for PBXNativeTarget "NoLookBudgetTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				72A19EC22F58A1C8005F04F0 /* Debug */,
+				72A19EC32F58A1C8005F04F0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

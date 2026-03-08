@@ -3,11 +3,12 @@ import SwiftData
 
 struct CategoryDetailView: View {
     let categoryName: String
+    @StateObject private var viewModel: CategoryDetailViewModel
     
-    // --- 仮のモックデータ ---
-    let totalBudget = 50000
-    let currentRemaining = 12000
-    let debtAmount = 8000 // 過去の未回収借金（マイナス分）
+    init(categoryName: String) {
+        self.categoryName = categoryName
+        _viewModel = StateObject(wrappedValue: CategoryDetailViewModel(categoryName: categoryName))
+    }
     
     var body: some View {
         ZStack {
@@ -22,7 +23,7 @@ struct CategoryDetailView: View {
                             .font(.headline)
                             .foregroundColor(.gray)
                         
-                        Text("¥\(totalBudget)")
+                        Text("¥\(viewModel.totalBudget)")
                             .font(.title)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -31,17 +32,17 @@ struct CategoryDetailView: View {
                     
                     // 残高表示部
                     VStack(spacing: 15) {
-                        Text("REMAINING")
+                        Text("残り予算")
                             .font(.headline)
                             .foregroundColor(.gray)
                         
-                        Text("¥\(currentRemaining)")
+                        Text("¥\(viewModel.currentRemaining)")
                             .font(.system(size: 50, weight: .black, design: .rounded))
                             .foregroundColor(Color(red: 0.4, green: 0.9, blue: 0.6))
                     }
                     
                     // --- 借金（過去の超過分）アラートエリア ---
-                    if debtAmount > 0 {
+                    if viewModel.debtAmount > 0 {
                         VStack(spacing: 15) {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
@@ -52,7 +53,7 @@ struct CategoryDetailView: View {
                                     .foregroundColor(.white)
                             }
                             
-                            Text("-¥\(debtAmount)")
+                            Text("-¥\(viewModel.debtAmount)")
                                 .font(.title)
                                 .fontWeight(.black)
                                 .foregroundColor(Color(red: 0.9, green: 0.4, blue: 0.4))
@@ -62,7 +63,7 @@ struct CategoryDetailView: View {
                                 .foregroundColor(.gray)
                             
                             // 借金回収設定へのリンク
-                            NavigationLink(destination: DebtRecoveryView(categoryName: categoryName, debtAmount: debtAmount)) {
+                            NavigationLink(destination: DebtRecoveryView(categoryName: categoryName, debtAmount: viewModel.debtAmount)) {
                                 Text("回収プランを決める")
                                     .font(.headline)
                                     .fontWeight(.bold)
@@ -91,9 +92,19 @@ struct CategoryDetailView: View {
                             .padding(.horizontal, 20)
                         
                         VStack(spacing: 1) {
-                            HistoryRowView(date: "今日", memo: "ランチ", amount: 1200)
-                            HistoryRowView(date: "昨日", memo: "カフェ", amount: 600)
-                            HistoryRowView(date: "2/25", memo: "スーパー", amount: 4500)
+                            if viewModel.transactions.isEmpty {
+                                Text("履歴がありません")
+                                    .padding()
+                                    .foregroundColor(.gray)
+                            } else {
+                                ForEach(viewModel.transactions) { tx in
+                                    HistoryRowView(
+                                        date: tx.date,
+                                        memo: tx.iouAmount > 0 ? "立替" : (tx.isIncome ? "臨時収入" : "支出"),
+                                        amount: tx.totalAmount
+                                    )
+                                }
+                            }
                         }
                         .background(Color(white: 0.2))
                         .cornerRadius(10)
@@ -106,6 +117,9 @@ struct CategoryDetailView: View {
         }
         .navigationTitle(categoryName)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            viewModel.fetchData()
+        }
     }
 }
 

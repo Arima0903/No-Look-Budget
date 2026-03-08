@@ -3,33 +3,37 @@ import SwiftUI
 struct MonthlyReviewView: View {
     @Environment(\.dismiss) private var dismiss
     
-    // サンプルデータ
-    let targetBudget: Double = 150000
-    let actualSpent: Double = 162000 // 12000円オーバー
-    
-    var isOverBudget: Bool {
-        actualSpent > targetBudget
-    }
-    
-    var overAmount: Double {
-        actualSpent - targetBudget
-    }
-    
-    // サンプルの超過カテゴリデータ
-    let overCategories: [(name: String, amount: Double)] = [
-        ("交際費", 8000),
-        ("食費", 3000),
-        ("変動費A", 1000)
-    ]
+    @StateObject private var viewModel = MonthlyReviewViewModel()
+    @AppStorage("isPremiumEnabled") private var isPremiumEnabled = false
     
     var body: some View {
         ZStack {
-            Color(red: 0.1, green: 0.1, blue: 0.11).ignoresSafeArea()
+            // 背景 (ダーク＆リッチ)
+            Color(red: 0.08, green: 0.08, blue: 0.09).ignoresSafeArea()
+            
+            // 予算オーバー時は背景に微かな赤グローを敷く
+            if viewModel.isOverBudget {
+                RadialGradient(
+                    gradient: Gradient(colors: [Color.red.opacity(0.1), Color.clear]),
+                    center: .top,
+                    startRadius: 100,
+                    endRadius: 600
+                )
+                .ignoresSafeArea()
+            } else {
+                RadialGradient(
+                    gradient: Gradient(colors: [Color.yellow.opacity(0.1), Color.clear]),
+                    center: .top,
+                    startRadius: 100,
+                    endRadius: 600
+                )
+                .ignoresSafeArea()
+            }
             
             VStack(spacing: 30) {
                 // トップヘッダー領域（タイトルと閉じるボタン）
                 ZStack {
-                    Text("先月の振り返り")
+                    Text("\(viewModel.reviewMonthString) の振り返り")
                         .font(.caption)
                         .foregroundColor(.gray)
                     
@@ -49,142 +53,258 @@ struct MonthlyReviewView: View {
                 
                 // メッセージと結果アイコン
                 VStack(spacing: 15) {
-                    Image(systemName: isOverBudget ? "exclamationmark.triangle.fill" : "star.circle.fill")
-                        .font(.system(size: 70))
-                        .foregroundColor(isOverBudget ? .red : .yellow)
-                    
-                    Text(isOverBudget ? "予算をオーバーしました" : "素晴らしい！黒字達成です")
-                        .font(.title2.bold())
-                        .foregroundColor(.white)
+                    if viewModel.isOverBudget {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 70))
+                            .foregroundColor(.red)
+                            .pulseAnimation()
+                            .shadow(color: .red.opacity(0.5), radius: 10, x: 0, y: 0)
+                        
+                        Text("\(viewModel.reviewMonthString) は予算をオーバーしました")
+                            .font(.title3.bold())
+                            .foregroundColor(.white)
+                    } else {
+                        ZStack {
+                            Circle()
+                                .fill(Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.2))
+                                .frame(width: 120, height: 120)
+                                .pulseAnimation()
+                            
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.yellow)
+                                .shadow(color: .yellow.opacity(0.8), radius: 15, x: 0, y: 0)
+                        }
+                        
+                        Text("MISSION CLEARED!")
+                            .font(.system(.title, design: .rounded).bold())
+                            .foregroundColor(Color(red: 0.4, green: 0.9, blue: 0.6))
+                            .shadow(color: Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.5), radius: 10, x: 0, y: 0)
+                        
+                        Text("見事、予算内に収めました！")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
                 }
+                .padding(.top, 10)
                 
-                // 結果の数字
-                VStack(spacing: 10) {
+                // 結果の数字 (Glassmorphism Card)
+                VStack(spacing: 12) {
                     HStack {
                         Text("設定予算(変動費)")
+                            .font(.subheadline)
                             .foregroundColor(.gray)
                         Spacer()
-                        Text("¥\(Int(targetBudget))")
+                        Text("¥\(Int(viewModel.targetBudget))")
+                            .font(.system(.body, design: .rounded).bold())
                             .foregroundColor(.white)
                     }
                     HStack {
                         Text("実際の支出")
+                            .font(.subheadline)
                             .foregroundColor(.gray)
                         Spacer()
-                        Text("¥\(Int(actualSpent))")
+                        Text("¥\(Int(viewModel.actualSpent))")
+                            .font(.system(.body, design: .rounded).bold())
                             .foregroundColor(.white)
                     }
-                    Divider().background(Color.gray.opacity(0.3))
+                    Divider().background(Color.white.opacity(0.2))
                     HStack {
                         Text("結果")
-                            .fontWeight(.bold)
+                            .font(.headline)
+                            .fontWeight(.black)
                             .foregroundColor(.white)
                         Spacer()
-                        Text(isOverBudget ? "- ¥\(Int(overAmount))" : "+ ¥\(Int(targetBudget - actualSpent))")
-                            .font(.title.bold())
-                            .foregroundColor(isOverBudget ? .red : .green)
+                        Text(viewModel.isOverBudget ? "- ¥\(Int(viewModel.overAmount))" : "+ ¥\(Int(viewModel.targetBudget - viewModel.actualSpent))")
+                            .font(.system(.title, design: .rounded).bold())
+                            .foregroundColor(viewModel.isOverBudget ? Color(red: 1.0, green: 0.4, blue: 0.4) : Color(red: 0.4, green: 0.9, blue: 0.6))
+                            .shadow(color: viewModel.isOverBudget ? Color.red.opacity(0.4) : Color.green.opacity(0.4), radius: 5, x: 0, y: 0)
                     }
                 }
-                .padding(20)
-                .background(Color.white.opacity(0.05))
-                .cornerRadius(15)
+                .padding(24)
+                .background(Material.ultraThinMaterial)
+                .cornerRadius(20)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.3), radius: 15, x: 0, y: 10)
                 .padding(.horizontal, 20)
                 
                 // カテゴリ別の超過状況（小さい円グラフ）
-                if isOverBudget {
+                if viewModel.isOverBudget {
                     VStack(spacing: 15) {
                         Text("原因となったカテゴリ")
                             .font(.caption)
+                            .fontWeight(.bold)
                             .foregroundColor(.gray)
                         
                         // 個数に応じてサイズを可変にする
-                        let chartSize: CGFloat = overCategories.count == 1 ? 100 : (overCategories.count == 2 ? 80 : 65)
+                        let chartSize: CGFloat = viewModel.overCategories.count == 1 ? 100 : (viewModel.overCategories.count == 2 ? 80 : 70)
                         
                         HStack(spacing: 20) {
-                            ForEach(overCategories, id: \.name) { cat in
-                                VStack {
-                                    ZStack {
-                                        Circle()
-                                            .stroke(Color(red: 0.9, green: 0.4, blue: 0.4).opacity(0.3), lineWidth: chartSize * 0.1)
-                                        Circle()
-                                            .trim(from: 0, to: 1)
-                                            .stroke(Color(red: 0.9, green: 0.4, blue: 0.4), style: StrokeStyle(lineWidth: chartSize * 0.1, lineCap: .butt))
-                                            .rotationEffect(.degrees(-90))
-                                        VStack {
-                                            Text(cat.name)
-                                                .font(.system(size: chartSize * 0.15, weight: .bold))
-                                                .foregroundColor(.gray)
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.5)
-                                            Text("-¥\(Int(cat.amount))")
-                                                .font(.system(size: chartSize * 0.18, weight: .bold))
-                                                .foregroundColor(Color(red: 0.9, green: 0.4, blue: 0.4))
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.5)
-                                        }
-                                    }
-                                    .frame(width: chartSize, height: chartSize)
-                                }
+                            ForEach(viewModel.overCategories, id: \.name) { cat in
+                                AnimatedOverCategoryRing(name: cat.name, amount: cat.amount, size: chartSize)
                             }
                         }
                     }
                     .padding(.horizontal, 20)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
                 
                 // 次のアクション分岐
-                if isOverBudget {
+                if viewModel.isOverBudget {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("⚠️ 回収プラン設定が必要です")
-                            .fontWeight(.bold)
+                            .font(.headline)
+                            .fontWeight(.black)
                             .foregroundColor(.red)
-                        Text("オーバーした金額は「借金」となります。今月のどの予算カテゴリから返済するか、回収プランを決めてください。")
+                        Text("オーバーした金額は「借金」となります。先月のどの予算カテゴリから返済するか、回収プランを決めてください。")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .lineSpacing(4)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    
+                    Spacer()
+                    
+                    if isPremiumEnabled {
+                        Button(action: {
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                            generator.impactOccurred()
+                            // 回収プラン画面(DebtRecoveryView)等のプレミアム機能へ遷移
+                        }) {
+                            Text("回収プランを決める")
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 18)
+                                .background(LinearGradient(colors: [.red, .orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .cornerRadius(16)
+                                .shadow(color: .red.opacity(0.4), radius: 10, x: 0, y: 5)
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+                        .padding(.horizontal, 20)
+                    } else {
+                        VStack(spacing: 8) {
+                            Button(action: {
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                                // Paywallを出すなどの処理に繋げる
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "crown.fill")
+                                        .foregroundColor(.yellow)
+                                    Text("回収プランを決める (Premium)")
+                                        .fontWeight(.bold)
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 18)
+                                .background(Color.white.opacity(0.1))
+                                .cornerRadius(16)
+                            }
+                            .buttonStyle(ScaleButtonStyle())
+                            
+                            Text("無料版では翌月の予算から自動的に一括で差し引かれます")
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                } else {
+                    VStack(spacing: 15) {
+                        Text("浮いたお金 ¥\(Int(viewModel.targetBudget - viewModel.actualSpent)) は自動的に\n「先取り貯金」または次回繰り越しに回ります。")
                             .font(.subheadline)
                             .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(6)
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 30)
+                    .padding(.top, 10)
                     
                     Spacer()
                     
                     Button(action: {
-                        // 回収プラン画面(DebtRecoveryView)等へ遷移
-                    }) {
-                        Text("回収プランを決める")
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.red)
-                            .cornerRadius(12)
-                    }
-                    .padding(.horizontal, 20)
-                } else {
-                    Text("今月もこの調子で、無理なく予算内でやりくりしましょう。")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .padding(.horizontal, 30)
-                        .multilineTextAlignment(.center)
-                    
-                    Spacer()
-                    
-                    Button(action: {
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                        viewModel.processToNextMonth()
                         dismiss()
                     }) {
-                        Text("今月の予算をそのまま開始")
-                            .fontWeight(.bold)
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.yellow)
-                            .cornerRadius(12)
+                        HStack {
+                            Text("報酬を受け取って次月へ")
+                                .fontWeight(.bold)
+                            Image(systemName: "arrow.right.circle.fill")
+                        }
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(LinearGradient(colors: [Color(red: 0.4, green: 0.9, blue: 0.6), Color(red: 0.2, green: 0.8, blue: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .cornerRadius(16)
+                        .shadow(color: Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.4), radius: 10, x: 0, y: 5)
                     }
+                    .buttonStyle(ScaleButtonStyle())
                     .padding(.horizontal, 20)
                 }
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 30)
+        }
+        .onAppear {
+            viewModel.fetchData()
         }
     }
 }
 
-#Preview {
+// サブビュー：超過カテゴリのアニメーション付きリング
+struct AnimatedOverCategoryRing: View {
+    let name: String
+    let amount: Double
+    let size: CGFloat
+    @State private var animatedTrim: Double = 0
+    
+    var body: some View {
+        VStack {
+            ZStack {
+                Circle()
+                    .stroke(Color.white.opacity(0.05), lineWidth: size * 0.1)
+                
+                Circle()
+                    .trim(from: 0, to: animatedTrim)
+                    .stroke(
+                        AngularGradient(gradient: Gradient(colors: [.orange, .red]), center: .center),
+                        style: StrokeStyle(lineWidth: size * 0.1, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .shadow(color: .red.opacity(0.4), radius: 5, x: 0, y: 0)
+                
+                VStack {
+                    Text(name)
+                        .font(.system(size: size * 0.15, weight: .bold))
+                        .foregroundColor(.gray)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                    Text("-¥\(Int(amount))")
+                        .font(.system(size: size * 0.18, weight: .black, design: .rounded))
+                        .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+            }
+            .frame(width: size, height: size)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 1.0, dampingFraction: 0.8).delay(0.2)) {
+                animatedTrim = 1.0
+            }
+        }
+    }
+}
+
+#Preview("Over Budget") {
+    MonthlyReviewView()
+}
+
+#Preview("Under Budget") {
     MonthlyReviewView()
 }

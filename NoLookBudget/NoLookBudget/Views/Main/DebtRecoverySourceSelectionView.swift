@@ -9,7 +9,7 @@ struct DebtRecoverySourceSelectionView: View {
     @State private var selectedSourceCategory: String? = nil
     
     // --- モック用のカテゴリ一覧 ---
-    let categories = ["食費", "交際費", "変動費", "変動費 A", "変動費 B", "変動費 C"]
+    @StateObject private var viewModel = DebtRecoveryViewModel()
     
     var body: some View {
         ZStack {
@@ -38,14 +38,14 @@ struct DebtRecoverySourceSelectionView: View {
                 // カテゴリ選択リスト
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(categories, id: \.self) { category in
+                        ForEach(viewModel.categories) { category in
                             SourceCategoryRow(
-                                name: category,
-                                isTarget: category == targetCategoryName,
-                                isSelected: selectedSourceCategory == category
+                                name: category.name,
+                                isTarget: category.name == targetCategoryName,
+                                isSelected: selectedSourceCategory == category.name
                             )
                             .onTapGesture {
-                                selectedSourceCategory = category
+                                selectedSourceCategory = category.name
                             }
                         }
                     }
@@ -55,10 +55,11 @@ struct DebtRecoverySourceSelectionView: View {
                 
                 // 決定ボタン
                 Button(action: {
-                    // ここに実際の補填設定処理（SwiftDataの更新など）を追加
-                    // 設定完了後、元の画面やダッシュボードに戻る処理
-                    // MVPモックなので一旦NavigationStackのルート等に戻るかdismissする
-                    dismiss()
+                    if let source = selectedSourceCategory {
+                        let monthlyDeduction = Double(debtAmount) / Double(selectedPlan?.divider ?? 1)
+                        _ = viewModel.recoverDebt(sourceCategoryName: source, targetCategoryName: targetCategoryName, amount: monthlyDeduction)
+                        dismiss()
+                    }
                 }) {
                     Text(selectedSourceCategory == nil ? "カテゴリを選択してください" : "設定を完了する")
                         .font(.headline)

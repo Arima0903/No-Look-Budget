@@ -9,11 +9,15 @@ final class IOURecord {
     var amount: Double
     var title: String
     var isResolved: Bool
+    var resolvedDate: Date?
+    var memo: String?
     
-    init(date: Date = Date(), amount: Double, title: String = "立替", isResolved: Bool = false) {
+    init(date: Date = Date(), amount: Double, title: String = "立替", isResolved: Bool = false, resolvedDate: Date? = nil, memo: String? = nil) {
         self.date = date
         self.amount = amount
         self.title = title
         self.isResolved = isResolved
+        self.resolvedDate = resolvedDate
+        self.memo = memo
     }
 }

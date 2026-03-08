@@ -1,10 +1,14 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    
     @State private var notificationsEnabled = true
     @State private var themeSelection = 0 // 0: Auto, 1: Dark, 2: Light
     @State private var hapticEnabled = true
     @State private var showPaywall = false
+    
+    @AppStorage("isPremiumEnabled") private var isPremiumEnabled = false
     
     var body: some View {
         NavigationStack {
@@ -18,9 +22,9 @@ struct SettingsView: View {
                             Image(systemName: "crown.fill")
                                 .foregroundColor(.yellow)
                             VStack(alignment: .leading) {
-                                Text("No-Look-Budget Premium")
+                                Text(isPremiumEnabled ? "Premium アクティブ" : "No-Look-Budget Premium")
                                     .fontWeight(.bold)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(isPremiumEnabled ? .yellow : .white)
                                 Text("借金の分割・さらに高度な管理")
                                     .font(.caption)
                                     .foregroundColor(.gray)
@@ -33,23 +37,6 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Color.white.opacity(0.05))
                 
-                // アカウント・予算設定
-                Section(header: Text("予算と家計").foregroundColor(.gray)) {
-                    NavigationLink(destination: Text("予算の再設定（初期設定と同じ）").foregroundColor(.white)) {
-                        Text("収入・固定費・先取り貯金の設定")
-                    }
-                    NavigationLink(destination: Text("カテゴリと割合の変更").foregroundColor(.white)) {
-                        Text("変動費カテゴリの編集")
-                    }
-                    HStack {
-                        Text("月をまたぐ締め日")
-                        Spacer()
-                        Text("毎月末日")
-                            .foregroundColor(.gray)
-                    }
-                }
-                .listRowBackground(Color.white.opacity(0.05))
-                
                 // 体験とシステム
                 Section(header: Text("システム設定").foregroundColor(.gray)) {
                     Toggle("通知（月末の借金警告など）", isOn: $notificationsEnabled)
@@ -58,6 +45,15 @@ struct SettingsView: View {
                         .tint(.yellow)
                 }
                 .listRowBackground(Color.white.opacity(0.05))
+                
+                #if DEBUG
+                // デバッグ用
+                Section(header: Text("デバッグ・開発用").foregroundColor(.gray)) {
+                    Toggle("Premiumフラグの強制切替", isOn: $isPremiumEnabled)
+                        .tint(.yellow)
+                }
+                .listRowBackground(Color.white.opacity(0.05))
+                #endif
                 
                 // サポート・その他
                 Section(header: Text("その他").foregroundColor(.gray)) {

@@ -4,15 +4,8 @@ import SwiftData
 struct TransactionHistoryView: View {
     @Environment(\.dismiss) private var dismiss
     
-    @State private var editingTransaction: TransactionMock? = nil
-    
-    // サンプルデータ
-    @State private var transactions = [
-        TransactionMock(id: 1, date: "2026-03-01 19:30", category: "食費", totalAmount: 1500, iouAmount: 0),
-        TransactionMock(id: 2, date: "2026-03-01 12:45", category: "交際費", totalAmount: 3500, iouAmount: 0),
-        TransactionMock(id: 3, date: "2026-03-02 08:15", category: "変動費", totalAmount: 500, iouAmount: 0),
-        TransactionMock(id: 4, date: "2026-03-03 21:00", category: "交際費", totalAmount: 15000, iouAmount: 12000) // 立替込みの例
-    ]
+    @StateObject private var viewModel = TransactionHistoryViewModel()
+    @State private var editingTransaction: TransactionDisplayItem? = nil
     
     var body: some View {
         NavigationStack {
@@ -20,27 +13,38 @@ struct TransactionHistoryView: View {
                 Color(red: 0.1, green: 0.1, blue: 0.11).ignoresSafeArea()
                 
                 List {
-                    ForEach(transactions) { tx in
+                    ForEach(viewModel.displayItems) { tx in
                         Button(action: {
-                            editingTransaction = tx
+                            if !tx.isFixedCost {
+                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                generator.impactOccurred()
+                                editingTransaction = tx
+                            }
                         }) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 5) {
-                                    Text(tx.category)
-                                        .font(.subheadline.bold())
-                                        .foregroundColor(.white)
+                                    HStack(spacing: 4) {
+                                        Text(tx.category)
+                                            .font(.subheadline.bold())
+                                            .foregroundColor(.white)
+                                        if tx.isFixedCost {
+                                            Image(systemName: "lock.fill")
+                                                .font(.caption2)
+                                                .foregroundColor(.gray)
+                                        }
+                                    }
                                     
                                     Text(tx.date)
-                                        .font(.caption)
+                                        .font(.caption2)
                                         .foregroundColor(.gray)
                                 }
                                 
                                 Spacer()
                                 
                                 VStack(alignment: .trailing, spacing: 4) {
-                                    Text("¥\(tx.personalAmount)")
-                                        .font(.title3.bold())
-                                        .foregroundColor(.white)
+                                    Text(tx.isIncome ? "+¥\(tx.totalAmount)" : "-¥\(tx.personalAmount)")
+                                        .font(.system(.title3, design: .rounded).bold())
+                                        .foregroundColor(tx.isIncome ? Color(red: 0.4, green: 0.9, blue: 0.6) : (tx.iouAmount > 0 ? .orange : .white))
                                     
                                     if tx.iouAmount > 0 {
                                         Text("総額 ¥\(tx.totalAmount) / 立替 ¥\(tx.iouAmount)")
@@ -49,20 +53,35 @@ struct TransactionHistoryView: View {
                                     }
                                 }
                             }
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
+                            .background(Material.ultraThinMaterial)
+                            .cornerRadius(16)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        .listRowBackground(Color.white.opacity(0.05))
+                        .buttonStyle(ScaleButtonStyle())
+                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .deleteDisabled(tx.isFixedCost) // 固定費はスワイプ削除不可
                     }
-                    .onDelete(perform: deleteTransaction)
+                    .onDelete(perform: viewModel.deleteTransaction)
                 }
+                .listStyle(.plain)
                 .scrollContentBackground(.hidden)
+                .padding(.top, 10)
                 
-                if transactions.isEmpty {
+                if viewModel.displayItems.isEmpty {
                     VStack {
                         Image(systemName: "list.bullet.rectangle")
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray.opacity(0.5))
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray.opacity(0.3))
                         Text("履歴がありません")
+                            .font(.headline)
                             .foregroundColor(.gray)
                             .padding(.top, 10)
                     }
@@ -72,34 +91,31 @@ struct TransactionHistoryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("閉じる") { dismiss() }
-                        .foregroundColor(.yellow)
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.gray.opacity(0.8))
+                    }
                 }
             }
-            .sheet(item: $editingTransaction) { tx in
-                QuickInputModalView(initialCategoryName: tx.category)
-                    .presentationDetents([.fraction(0.85), .large])
+            .sheet(item: $editingTransaction, onDismiss: {
+                viewModel.fetchData()
+            }) { tx in
+                QuickInputModalView(
+                    initialCategoryName: tx.isIncome ? nil : tx.category,
+                    editingTransactionId: tx.id,
+                    initialAmount: "\(tx.totalAmount)",
+                    isIncome: tx.isIncome,
+                    isIOU: tx.iouAmount > 0
+                )
+                .presentationDetents([.fraction(0.85), .large])
             }
         }
-    }
-    
-    // 削除処理のモック
-    private func deleteTransaction(at offsets: IndexSet) {
-        transactions.remove(atOffsets: offsets)
-        // 実際のアプリではここでデータベースからも削除し、関連するカテゴリの予算残高を復元する
-    }
-}
-
-// モック用の構造体
-struct TransactionMock: Identifiable {
-    let id: Int
-    let date: String
-    let category: String
-    let totalAmount: Int
-    let iouAmount: Int
-    
-    var personalAmount: Int {
-        totalAmount - iouAmount
+        .onAppear {
+            viewModel.fetchData()
+        }
     }
 }
 
@@ -110,11 +126,6 @@ let previewContainer: ModelContainer = {
         let container = try ModelContainer(for: Budget.self, ItemCategory.self, IOURecord.self, ExpenseTransaction.self, configurations: config)
         let context = container.mainContext
         context.insert(ItemCategory(name: "食費", totalAmount: 50000, spentAmount: 10000, orderIndex: 0))
-        context.insert(ItemCategory(name: "交際費", totalAmount: 30000, spentAmount: 15000, orderIndex: 1))
-        context.insert(ItemCategory(name: "変動費", totalAmount: 20000, spentAmount: 5000, orderIndex: 2))
-        context.insert(ItemCategory(name: "変動費 A", totalAmount: 20000, spentAmount: 10000, orderIndex: 3))
-        context.insert(ItemCategory(name: "変動費 B", totalAmount: 10000, spentAmount: 2000, orderIndex: 4))
-        context.insert(ItemCategory(name: "変動費 C", totalAmount: 15000, spentAmount: 20000, orderIndex: 5))
         return container
     } catch {
         fatalError("Failed to create preview container: \(error)")
