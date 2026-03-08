@@ -239,7 +239,9 @@ struct DashboardView: View {
             QuickInputModalView(initialCategoryName: viewModel.initialInputCategory)
                 .presentationDetents([.fraction(0.85), .large])
         }
-        .sheet(isPresented: $viewModel.showSettings) {
+        .sheet(isPresented: $viewModel.showSettings, onDismiss: {
+            viewModel.fetchData()
+        }) {
             SettingsView()
         }
         .sheet(isPresented: $viewModel.showHistory, onDismiss: {
@@ -252,15 +254,21 @@ struct DashboardView: View {
         }) {
             MonthlyReviewView()
         }
-        .sheet(isPresented: $viewModel.showIOU) {
+        .sheet(isPresented: $viewModel.showIOU, onDismiss: {
+            viewModel.fetchData()
+        }) {
             IOURecordView()
         }
-        .sheet(isPresented: $viewModel.showBudgetConfig) {
+        .sheet(isPresented: $viewModel.showBudgetConfig, onDismiss: {
+            viewModel.fetchData()
+        }) {
             NavigationStack {
                 BudgetConfigurationView()
             }
         }
-        .sheet(isPresented: $viewModel.showCategoryConfig) {
+        .sheet(isPresented: $viewModel.showCategoryConfig, onDismiss: {
+            viewModel.fetchData()
+        }) {
             NavigationStack {
                 CategoryConfigurationView()
             }
