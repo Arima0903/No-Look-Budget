@@ -9,7 +9,7 @@ struct InputWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: InputWidgetProvider()) { entry in
             InputWidgetEntryView(entry: entry)
-                .containerBackground(Color(red: 0.13, green: 0.13, blue: 0.14), for: .widget)
+                .containerBackground(Theme.spaceNavy, for: .widget)
         }
         .configurationDisplayName("最速入力 (No-Look)")
         .description("Apple Payなどで支払った直後に、1タップで即座に金額を減らします。")
@@ -82,7 +82,7 @@ struct InputWidgetEntryView: View {
                 
                 Text("¥\(entry.remainingBudget)")
                     .font(.system(size: 32, weight: .black, design: .rounded))
-                    .foregroundColor(Color(red: 0.4, green: 0.9, blue: 0.6))
+                    .foregroundColor(Theme.spaceGreen)
             }
             .padding(.top, 15)
             .padding(.bottom, 10)
@@ -131,10 +131,10 @@ struct QuickButton: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(Color(red: 0.2, green: 0.2, blue: 0.22))
-                .cornerRadius(10)
+                .background(Theme.spaceNavyLighter)
+                .clipShape(Capsule())
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    Capsule()
                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 )
         }

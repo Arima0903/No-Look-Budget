@@ -25,18 +25,34 @@ struct QuickInputModalView: View {
     var body: some View {
         ZStack {
             // 背景（すりガラス効果 + ダークベース）
-            Color(red: 0.1, green: 0.1, blue: 0.12).ignoresSafeArea()
+            Theme.spaceNavy.ignoresSafeArea()
             
             // 立替モード時は背景にオレンジの微かなグローを追加
             if viewModel.isIOUMode {
                 RadialGradient(
-                    gradient: Gradient(colors: [Color.orange.opacity(0.15), Color.clear]),
+                    gradient: Gradient(colors: [Theme.warmOrange.opacity(0.15), Color.clear]),
                     center: .bottom,
                     startRadius: 50,
                     endRadius: 500
                 )
                 .ignoresSafeArea()
                 .transition(.opacity)
+            }
+            
+            // 右下にマスコットを薄く表示 (透かしのように)
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Image("astronaut_mascot")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 80, height: 80)
+                        .blendMode(.screen) // 追加: 黒背景を透過(合成)させる
+                        .opacity(0.2)
+                        .padding(.bottom, 20)
+                        .padding(.trailing, 20)
+                }
             }
             
             VStack(spacing: 20) {
@@ -74,11 +90,11 @@ struct QuickInputModalView: View {
                             Text("立替")
                                 .font(.caption)
                                 .fontWeight(.bold)
-                                .foregroundColor(viewModel.isIOUMode ? .orange : .gray)
+                                .foregroundColor(viewModel.isIOUMode ? Theme.warmOrange : .gray)
                             
                             Toggle("", isOn: $viewModel.isIOUMode.animation(.spring(response: 0.3, dampingFraction: 0.7)))
                                 .labelsHidden()
-                                .tint(.orange)
+                                .tint(Theme.warmOrange)
                                 .onChange(of: viewModel.isIOUMode) { oldValue, newValue in
                                     let generator = UIImpactFeedbackGenerator(style: .light)
                                     generator.impactOccurred()
@@ -88,7 +104,7 @@ struct QuickInputModalView: View {
                         .padding(.vertical, 6)
                         .background(.ultraThinMaterial)
                         .cornerRadius(20)
-                        .shadow(color: viewModel.isIOUMode ? Color.orange.opacity(0.3) : .clear, radius: 8, x: 0, y: 0)
+                        .shadow(color: viewModel.isIOUMode ? Theme.warmOrange.opacity(0.3) : .clear, radius: 8, x: 0, y: 0)
                     } else {
                         // スペースのバランスを取るためのダミー
                         Color.clear.frame(width: 70, height: 30)
@@ -112,12 +128,12 @@ struct QuickInputModalView: View {
                             HStack {
                                 Text("みんなの立替分")
                                     .font(.subheadline).bold()
-                                    .foregroundColor(viewModel.currentFocus == .iou ? .orange : .gray)
+                                    .foregroundColor(viewModel.currentFocus == .iou ? Theme.warmOrange : .gray)
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 2) {
                                     Text(viewModel.iouExpression)
                                         .font(.system(size: 36, weight: .black, design: .rounded))
-                                        .foregroundColor(viewModel.currentFocus == .iou ? .orange : .gray.opacity(0.5))
+                                        .foregroundColor(viewModel.currentFocus == .iou ? Theme.warmOrange : .gray.opacity(0.5))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.4)
                                     if let res = viewModel.calculateResult(for: viewModel.iouExpression), res != viewModel.iouExpression {
@@ -132,7 +148,7 @@ struct QuickInputModalView: View {
                             .background(RoundedRectangle(cornerRadius: 15).fill(Color.white.opacity(viewModel.currentFocus == .iou ? 0.08 : 0.02)))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 15)
-                                    .stroke(viewModel.currentFocus == .iou ? Color.orange.opacity(0.5) : Color.clear, lineWidth: 2)
+                                    .stroke(viewModel.currentFocus == .iou ? Theme.warmOrange.opacity(0.5) : Color.clear, lineWidth: 2)
                             )
                         }
                         
@@ -178,7 +194,7 @@ struct QuickInputModalView: View {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(viewModel.expressionText)
                             .font(.system(size: 60, weight: .black, design: .rounded))
-                            .foregroundColor(viewModel.inputMode == .income ? Color(red: 0.4, green: 0.9, blue: 0.6) : .white)
+                            .foregroundColor(viewModel.inputMode == .income ? Theme.spaceGreen : .white)
                             .lineLimit(1)
                             .minimumScaleFactor(0.4)
                             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -201,7 +217,7 @@ struct QuickInputModalView: View {
                         Text("収入の種類を選択")
                             .font(.caption)
                             .fontWeight(.bold)
-                            .foregroundColor(Color(red: 0.4, green: 0.9, blue: 0.6))
+                            .foregroundColor(Theme.spaceGreen)
                             .padding(.horizontal, 20)
                             
                         let incomeTypes = ["給与", "賞与", "副業", "投資", "お小遣い", "その他"]
@@ -313,9 +329,9 @@ struct CategorySelectButton: View {
                     ZStack {
                         if isSelected {
                             if isIOUMode {
-                                LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                Theme.dangerGradient
                             } else {
-                                LinearGradient(colors: [Color(red: 0.4, green: 0.9, blue: 0.6), Color(red: 0.2, green: 0.8, blue: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                Theme.safeGradient
                             }
                         } else {
                             Rectangle().fill(.ultraThinMaterial)
@@ -327,7 +343,7 @@ struct CategorySelectButton: View {
                         .stroke(isSelected ? Color.clear : Color.white.opacity(0.1), lineWidth: 1)
                 )
                 .cornerRadius(12)
-                .shadow(color: isSelected ? (isIOUMode ? .orange.opacity(0.4) : Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.4)) : .clear, radius: 8, x: 0, y: 4)
+                .shadow(color: isSelected ? (isIOUMode ? Theme.warmOrange.opacity(0.4) : Theme.spaceGreen.opacity(0.4)) : .clear, radius: 8, x: 0, y: 4)
         }
         .buttonStyle(ScaleButtonStyle())
     }
@@ -383,11 +399,11 @@ struct CalculatorKeypad: View {
             Color.white.opacity(0.15)
         case "=":
             if inputMode == .income {
-                LinearGradient(colors: [Color(red: 0.4, green: 0.9, blue: 0.6), Color(red: 0.2, green: 0.8, blue: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                Theme.safeGradient
             } else if isIOUMode {
-                LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing)
+                Theme.dangerGradient
             } else {
-                LinearGradient(colors: [Color(red: 0.4, green: 0.9, blue: 0.6), Color(red: 0.2, green: 0.8, blue: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                Theme.safeGradient
             }
         default:
             Rectangle().fill(.ultraThinMaterial)
@@ -396,7 +412,7 @@ struct CalculatorKeypad: View {
     
     private func shadowColor(for button: String) -> Color {
         if button == "=" {
-            return (inputMode == .income || !isIOUMode) ? Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.4) : Color.orange.opacity(0.4)
+            return (inputMode == .income || !isIOUMode) ? Theme.spaceGreen.opacity(0.4) : Theme.warmOrange.opacity(0.4)
         }
         return .clear
     }

@@ -11,8 +11,29 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                // 背景 (ダークモード基調)
-                Color(red: 0.08, green: 0.08, blue: 0.09).ignoresSafeArea()
+                // 背景 (ダークモード基調) + 星空アニメーション
+                ZStack {
+                    Theme.spaceNavy
+                    ConstellationView()
+                    
+                    // 右上の空きスペースにマスコットを配置
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Image("astronaut_mascot")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 100, height: 100)
+                                .blendMode(.screen) // 追加: 黒背景を透過(合成)させる
+                                .opacity(0.85)
+                                // 修正方法: 頭が見切れる場合はここの数値を大きく（下に移動）します
+                                .padding(.top, 100) 
+                                .padding(.trailing, 15)
+                        }
+                        Spacer()
+                    }
+                }
+                .ignoresSafeArea()
                 
                 // 予算オーバー時の警告グローエフェクト
                 if let bg = viewModel.currentBudget, bg.spentAmount > bg.totalAmount {
@@ -125,11 +146,9 @@ struct DashboardView: View {
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
-                            .background(
-                                LinearGradient(colors: [Color(red: 0.4, green: 0.9, blue: 0.6), Color(red: 0.2, green: 0.8, blue: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            )
+                            .background(Theme.safeGradient)
                             .cornerRadius(16)
-                            .shadow(color: Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.4), radius: 10, x: 0, y: 5)
+                            .shadow(color: Theme.spaceGreen.opacity(0.4), radius: 10, x: 0, y: 5)
                         }
                         .buttonStyle(ScaleButtonStyle())
                     }
@@ -204,7 +223,10 @@ struct DashboardView: View {
                 .transition(.move(edge: .leading))
             }
         }
+        .background(Theme.spaceNavy)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Theme.spaceNavy, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text(Date().formatted(.dateTime.weekday(.wide).month().day()))
@@ -237,27 +259,32 @@ struct DashboardView: View {
             viewModel.fetchData()
         }) {
             QuickInputModalView(initialCategoryName: viewModel.initialInputCategory)
+                .preferredColorScheme(.dark)
                 .presentationDetents([.fraction(0.85), .large])
         }
         .sheet(isPresented: $viewModel.showSettings, onDismiss: {
             viewModel.fetchData()
         }) {
             SettingsView()
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $viewModel.showHistory, onDismiss: {
             viewModel.fetchData()
         }) {
             TransactionHistoryView()
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $viewModel.showMonthlyReview, onDismiss: {
             viewModel.fetchData()
         }) {
             MonthlyReviewView()
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $viewModel.showIOU, onDismiss: {
             viewModel.fetchData()
         }) {
             IOURecordView()
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $viewModel.showBudgetConfig, onDismiss: {
             viewModel.fetchData()
@@ -265,6 +292,7 @@ struct DashboardView: View {
             NavigationStack {
                 BudgetConfigurationView()
             }
+            .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $viewModel.showCategoryConfig, onDismiss: {
             viewModel.fetchData()
@@ -272,6 +300,7 @@ struct DashboardView: View {
             NavigationStack {
                 CategoryConfigurationView()
             }
+            .preferredColorScheme(.dark)
         }
         .onChange(of: deepLinkManager.selectedCategory) { oldValue, newValue in
             // ディープリンクで受け取ったカテゴリ名があれば、そのカテゴリ状態のまま入力モーダルを開く
@@ -292,6 +321,8 @@ struct DashboardView: View {
             CategoryDetailView(categoryName: categoryName)
         }
         } // End of NavigationStack
+        .background(Theme.spaceNavy)
+        .preferredColorScheme(.dark) // 確実にダークモードを強制
     }
 }
 
@@ -312,6 +343,58 @@ struct PulseAnimationModifier: ViewModifier {
 extension View {
     func pulseAnimation() -> some View {
         self.modifier(PulseAnimationModifier())
+    }
+}
+
+// MARK: - Constellation Background (星座アニメーション・静的)
+struct ConstellationView: View {
+    // 星の数
+    let starCount = 35
+    @State private var stars: [CGPoint] = []
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // 星同士を繋ぐ線 (星座線)
+                Path { path in
+                    for i in 0..<stars.count {
+                        // 近くの星（数個）と線を繋ぐ
+                        for j in (i+1)..<stars.count {
+                            let dist = hypot(stars[i].x - stars[j].x, stars[i].y - stars[j].y)
+                            if dist < 80 { // 距離が近い星だけを繋ぐ
+                                path.move(to: stars[i])
+                                path.addLine(to: stars[j])
+                            }
+                        }
+                    }
+                }
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                
+                // 星そのもの
+                ForEach(0..<stars.count, id: \.self) { index in
+                    Circle()
+                        .fill(Color.white.opacity(0.6))
+                        // インデックスを利用して星の大きさを1.5〜3.5の間で疑似ランダムに設定
+                        .frame(width: 1.5 + CGFloat(index % 3))
+                        .position(stars[index])
+                        .opacity(0.6 + (Double(index % 4) * 0.1))
+                }
+            }
+            .onAppear {
+                if stars.isEmpty {
+                    var newStars: [CGPoint] = []
+                    // 再描画時も座標が変わらないように一度だけ生成して保持する
+                    for _ in 0..<starCount {
+                        newStars.append(CGPoint(
+                            x: CGFloat.random(in: 0...geometry.size.width),
+                            y: CGFloat.random(in: 0...geometry.size.height)
+                        ))
+                    }
+                    stars = newStars
+                }
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
@@ -341,6 +424,8 @@ struct BudgetGaugeView: View {
                 .stroke(Color.white.opacity(0.05), style: StrokeStyle(lineWidth: 35, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
             
+            // 宇宙飛行士モチーフはダッシュボード全体の右上に移動しました
+            
             let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 250000.0
             let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 250000.0)
             let displaySpent = (budget?.spentAmount ?? 100000.0) + fixedAndSavings
@@ -352,7 +437,7 @@ struct BudgetGaugeView: View {
                 .trim(from: 0, to: animatedRatio)
                 .stroke(
                     AngularGradient(
-                        gradient: Gradient(colors: [Color.orange, Color.red]),
+                        gradient: Gradient(colors: [Theme.warmOrange, Theme.coralRed]),
                         center: .center,
                         startAngle: .degrees(-90),
                         endAngle: .degrees(270)
@@ -360,22 +445,18 @@ struct BudgetGaugeView: View {
                     style: StrokeStyle(lineWidth: 35, lineCap: .butt)
                 )
                 .rotationEffect(.degrees(-90))
-                .shadow(color: .red.opacity(clampedRatio > 0.8 ? 0.3 : 0), radius: 10)
+                .shadow(color: Theme.coralRed.opacity(clampedRatio > 0.8 ? 0.3 : 0), radius: 10)
             
             // 残高の緑ライン (赤の終点から1周の終わりまで)
             if animatedRatio < 1.0 {
                 Circle()
                     .trim(from: animatedRatio + 0.005, to: 1) // +0.005 for a tiny gap
                     .stroke(
-                        LinearGradient(
-                            colors: [Color(red: 0.2, green: 0.8, blue: 0.5), Color(red: 0.4, green: 0.9, blue: 0.6)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
+                        Theme.safeGradient,
                         style: StrokeStyle(lineWidth: 35, lineCap: .butt)
                     )
                     .rotationEffect(.degrees(-90))
-                    .shadow(color: Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.2), radius: 10)
+                    .shadow(color: Theme.spaceGreen.opacity(0.2), radius: 10)
             }
             
             // 中央空洞への情報表示
@@ -396,7 +477,7 @@ struct BudgetGaugeView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.gray)
                 
-                let remainingColor: Color = (spentRatio > 0.8) ? .red : ((spentRatio > 0.5) ? .yellow : .white)
+                let remainingColor: Color = (spentRatio > 0.8) ? Theme.coralRed : ((spentRatio > 0.5) ? Theme.warmOrange : Theme.textMain)
                 
                 Text("¥\(Int(budget?.remainingAmount ?? 150000))")
                     .font(.system(size: 34, weight: .black, design: .rounded))
@@ -416,7 +497,7 @@ struct BudgetGaugeView: View {
                 
                 Text("¥\(Int(displaySpent))")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
+                    .foregroundColor(Theme.coralRed)
                 
                 // 追加：詳細へ遷移できることを明示
                 HStack(spacing: 4) {
@@ -429,7 +510,7 @@ struct BudgetGaugeView: View {
                 .padding(.top, 8)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(Color.white.opacity(0.05))
+                .background(Material.ultraThinMaterial)
                 .clipShape(Capsule())
                 .padding(.top, 5)
             }
@@ -464,9 +545,9 @@ struct CategoryGaugeView: View {
     
     var amountColor: Color {
         // 文字の色: 50%を超えると黄色、100%を超えると赤
-        if ratio >= 1.0 { return Color(red: 0.9, green: 0.4, blue: 0.4) }
-        else if ratio > 0.5 { return Color.yellow }
-        else { return Color(red: 0.4, green: 0.9, blue: 0.6) }
+        if ratio >= 1.0 { return Theme.coralRed }
+        else if ratio > 0.5 { return Theme.warmOrange }
+        else { return Theme.spaceGreen }
     }
     
     var amountString: String {
@@ -491,7 +572,7 @@ struct CategoryGaugeView: View {
                 .trim(from: 0, to: clampedRatio)
                 .stroke(
                     AngularGradient(
-                        gradient: Gradient(colors: [Color.orange, Color.red]),
+                        gradient: Gradient(colors: [Theme.warmOrange, Theme.coralRed]),
                         center: .center,
                         startAngle: .degrees(-90),
                         endAngle: .degrees(270)
@@ -505,7 +586,7 @@ struct CategoryGaugeView: View {
                 Circle()
                     .trim(from: clampedRatio + 0.05, to: 1) // slightly separate
                     .stroke(
-                        LinearGradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.5), Color(red: 0.4, green: 0.9, blue: 0.6)], startPoint: .top, endPoint: .bottom),
+                        Theme.safeGradient,
                         style: StrokeStyle(lineWidth: 8, lineCap: .butt)
                     )
                     .rotationEffect(.degrees(-90))
@@ -529,8 +610,9 @@ struct CategoryGaugeView: View {
 
 #Preview {
     DashboardView()
-        .modelContainer(for: [Budget.self, ItemCategory.self, IOURecord.self, ExpenseTransaction.self], inMemory: true)
+        .modelContainer(for: [Budget.self, ItemCategory.self, IOURecord.self, ExpenseTransaction.self, FixedCostSetting.self], inMemory: true)
         .environmentObject(DeepLinkManager())
+        .preferredColorScheme(.dark)
 }
 
 // MARK: - 全体予算詳細ビュー
@@ -544,7 +626,7 @@ struct BudgetDetailView: View {
     
     var body: some View {
         ZStack {
-            Color(red: 0.13, green: 0.13, blue: 0.14).ignoresSafeArea()
+            Theme.spaceNavy.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
                     BudgetGaugeView(budget: budget)
@@ -587,8 +669,8 @@ struct BudgetDetailView: View {
                                         .lineStyle(StrokeStyle(lineWidth: 3))
                                     }
                                     .chartForegroundStyleScale([
-                                        "残り予算": Color(red: 0.4, green: 0.9, blue: 0.6),
-                                        "累積支出": Color(red: 0.9, green: 0.4, blue: 0.4)
+                                        "残り予算": Theme.spaceGreen,
+                                        "累積支出": Theme.coralRed
                                     ])
                                     .chartLegend(position: .top, alignment: .trailing)
                                     .chartXScale(domain: startOfMonth...endOfMonth)

@@ -72,7 +72,7 @@ struct NoLookBudgetWidgetEntryView : View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.13, green: 0.13, blue: 0.14)
+            Theme.spaceNavy
             
             VStack(spacing: 12) {
                 // 上半分: メイン情報（左にゲージ、右に詳細テキスト）
@@ -110,7 +110,7 @@ struct NoLookBudgetWidgetEntryView : View {
                                     .foregroundColor(.gray)
                                 Text("¥\(Int(entry.budgetSpent))")
                                     .font(.system(size: 16, weight: .bold)) // 少し縮小
-                                    .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
+                                    .foregroundColor(Theme.coralRed)
                             }
                         }
                         .padding(.bottom, 5) // 下端へのパディング
@@ -189,7 +189,7 @@ struct WidgetBudgetGaugeView: View {
                 .trim(from: 0, to: clampedRatio)
                 .stroke(
                     AngularGradient(
-                        gradient: Gradient(colors: [Color.orange, Color.red]),
+                        gradient: Gradient(colors: [Theme.warmOrange, Theme.coralRed]),
                         center: .center,
                         startAngle: .degrees(-90),
                         endAngle: .degrees(270)
@@ -203,11 +203,7 @@ struct WidgetBudgetGaugeView: View {
                 Circle()
                     .trim(from: clampedRatio + 0.005, to: 1) // +0.005 for a tiny gap
                     .stroke(
-                        LinearGradient(
-                            colors: [Color(red: 0.2, green: 0.8, blue: 0.5), Color(red: 0.4, green: 0.9, blue: 0.6)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
+                        Theme.safeGradient,
                         style: StrokeStyle(lineWidth: 22, lineCap: .butt)
                     )
                     .rotationEffect(.degrees(-90))
@@ -239,9 +235,9 @@ struct WidgetCategoryGaugeView: View {
     let ratio: Double
     var amountColor: Color {
         // グラデーションの境界値: 50%以上で黄色、100%以上で赤
-        if ratio >= 1.0 { return Color(red: 0.9, green: 0.4, blue: 0.4) }
-        else if ratio > 0.5 { return Color.yellow }
-        else { return Color(red: 0.4, green: 0.9, blue: 0.6) }
+        if ratio >= 1.0 { return Theme.coralRed }
+        else if ratio > 0.5 { return Theme.warmOrange }
+        else { return Theme.spaceGreen }
     }
     
     var amountString: String { amount < 0 ? "-¥\(-amount)" : "¥\(amount)" }
@@ -274,11 +270,7 @@ struct WidgetCategoryGaugeView: View {
                 Circle()
                     .trim(from: clampedRatio + 0.02, to: 1)
                     .stroke(
-                        LinearGradient(
-                            colors: [Color(red: 0.2, green: 0.8, blue: 0.5), Color(red: 0.4, green: 0.9, blue: 0.6)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
+                        Theme.safeGradient,
                         style: StrokeStyle(lineWidth: 10, lineCap: .butt)
                     )
                     .rotationEffect(.degrees(-90))

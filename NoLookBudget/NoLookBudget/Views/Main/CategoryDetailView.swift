@@ -12,7 +12,23 @@ struct CategoryDetailView: View {
     
     var body: some View {
         ZStack {
-            Color(red: 0.13, green: 0.13, blue: 0.14).ignoresSafeArea()
+            Theme.spaceNavy.ignoresSafeArea()
+            
+            // 右下にマスコットを薄く表示
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Image("astronaut_mascot")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+                        .blendMode(.screen) // 追加: 黒背景を透過(合成)させる
+                        .opacity(0.15)
+                        .padding(.bottom, 20)
+                        .padding(.trailing, 20)
+                }
+            }
             
             ScrollView {
                 VStack(spacing: 30) {
@@ -120,6 +136,7 @@ struct CategoryDetailView: View {
         .onAppear {
             viewModel.fetchData()
         }
+        .preferredColorScheme(.dark)
     }
 }
 

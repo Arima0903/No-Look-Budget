@@ -10,6 +10,7 @@ struct NoLookBudgetApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(.dark)
                 .environmentObject(deepLinkManager)
                 .onOpenURL { url in
                     deepLinkManager.handleURL(url)

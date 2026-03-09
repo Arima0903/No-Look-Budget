@@ -10,7 +10,23 @@ struct TransactionHistoryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.1, green: 0.1, blue: 0.11).ignoresSafeArea()
+                Theme.spaceNavy.ignoresSafeArea()
+                
+                // 右下にマスコットを薄く表示
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Image("astronaut_mascot")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .blendMode(.screen) // 追加: 黒背景を透過(合成)させる
+                            .opacity(0.15)
+                            .padding(.bottom, 20)
+                            .padding(.trailing, 20)
+                    }
+                }
                 
                 List {
                     ForEach(viewModel.displayItems) { tx in
@@ -64,8 +80,8 @@ struct TransactionHistoryView: View {
                             .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
                         .buttonStyle(ScaleButtonStyle())
-                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
                         .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                         .listRowSeparator(.hidden)
                         .deleteDisabled(tx.isFixedCost) // 固定費はスワイプ削除不可
                     }
