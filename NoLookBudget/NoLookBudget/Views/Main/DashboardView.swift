@@ -11,29 +11,11 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                // 背景 (ダークモード基調) + 星空アニメーション
-                ZStack {
-                    Theme.spaceNavy
-                    ConstellationView()
-                    
-                    // 右上の空きスペースにマスコットを配置
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Image("astronaut_mascot")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 100, height: 100)
-                                .blendMode(.screen) // 追加: 黒背景を透過(合成)させる
-                                .opacity(0.85)
-                                // 修正方法: 頭が見切れる場合はここの数値を大きく（下に移動）します
-                                .padding(.top, 100) 
-                                .padding(.trailing, 15)
-                        }
-                        Spacer()
-                    }
-                }
-                .ignoresSafeArea()
+                // 背景: 星空画像（プログラム生成から静止画に変更・処理負荷ゼロ）
+                Image("starfield_background")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
                 
                 // 予算オーバー時の警告グローエフェクト
                 if let bg = viewModel.currentBudget, bg.spentAmount > bg.totalAmount {
@@ -48,156 +30,195 @@ struct DashboardView: View {
                 }
 
                 
-                VStack(spacing: 30) {
-                    // 予算オーバー警告 (Glassmorphism)
-                    if let bg = viewModel.currentBudget, bg.spentAmount > bg.totalAmount {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.red)
-                                .font(.title3)
-                                Text("予算をオーバーしています！")
-                                    .font(.subheadline)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 15)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity)
-                        .background(Material.ultraThinMaterial)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("今月の残り予算")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                            .padding(.horizontal, 20)
-                        
-                        // メインの予算ゲージ（金額表示を内部に含む）
-                        HStack {
-                            Spacer()
-                            NavigationLink(destination: BudgetDetailView(
-                                budget: viewModel.currentBudget,
-                                recentTransactions: viewModel.recentTransactions,
-                                dailyTrends: viewModel.dailyTrends,
-                                onDelete: viewModel.deleteRecentTransaction
-                            )) {
-                                BudgetGaugeView(budget: viewModel.currentBudget)
-                                    .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .padding(.top, viewModel.currentBudget?.spentAmount ?? 0 > viewModel.currentBudget?.totalAmount ?? 0 ? 0 : 10)
-                            Spacer()
-                        }
-                    }
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(viewModel.isCurrentMonth ? "今月の残り予算" : "\(viewModel.selectedMonthTitle)の残り予算")
+                                .font(.headline)
+                                .foregroundColor(.white.opacity(0.85))
+                                .shadow(color: .black.opacity(0.6), radius: 4)
+                                .padding(.horizontal, 30)
+                                .padding(.top, 30)
 
-                    
-                    // 支出入力ボタン（メインアクション）
-                    VStack(spacing: 15) {
-                        // 借金警告ボタン (Glassmorphism)
-                        if viewModel.hasDebtFromLastMonth {
-                            Button(action: {
-                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                generator.impactOccurred()
-                                viewModel.showMonthlyReview = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "exclamationmark.triangle")
-                                    Text("前月の借金により予算修正が必要です")
+                            // メインの予算ゲージ（右スワイプでカレンダーに切り替え）
+                            TabView {
+                                // ページ1: 予算ゲージ
+                                NavigationLink(destination: BudgetDetailView(
+                                    budget: viewModel.currentBudget,
+                                    recentTransactions: viewModel.recentTransactions,
+                                    dailyTrends: viewModel.dailyTrends,
+                                    onDelete: viewModel.deleteRecentTransaction
+                                )) {
+                                    BudgetGaugeView(budget: viewModel.currentBudget)
+                                        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .tag(0)
+
+                                // ページ2: 月別カレンダー（右スワイプで表示）
+                                CalendarView(
+                                    budget: viewModel.currentBudget,
+                                    dailySpending: viewModel.dailySpending
+                                )
+                                .tag(1)
+                            }
+                            .tabViewStyle(.page(indexDisplayMode: .always))
+                            .frame(height: 340)
+                            .padding(.top, 10)
+                        }
+
+                        // 支出入力ボタン（メインアクション）
+                        VStack(spacing: 10) {
+                            // 予算オーバー警告（コンパクト・円グラフ下に移動）
+                            if let bg = viewModel.currentBudget, bg.spentAmount > bg.totalAmount, viewModel.isCurrentMonth {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.caption)
+                                        .foregroundColor(Theme.coralRed)
+                                    Text("予算をオーバーしています！")
                                         .font(.caption)
                                         .fontWeight(.bold)
+                                        .foregroundColor(.white)
                                     Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
                                 }
-                                .foregroundColor(.yellow)
-                                .padding(.horizontal, 15)
-                                .padding(.vertical, 12)
-                                .background(Material.ultraThin)
-                                .cornerRadius(12)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Theme.coralRed.opacity(0.15))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.yellow.opacity(0.4), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Theme.coralRed.opacity(0.4), lineWidth: 1)
                                 )
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .transition(.move(edge: .top).combined(with: .opacity))
                             }
-                        }
-                        
-                        Button(action: {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.impactOccurred()
-                            viewModel.initialInputCategory = nil
-                            viewModel.showInputModal = true
-                        }) {
-                            HStack {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title3)
-                                Text("記録をつける")
-                                    .fontWeight(.bold)
-                            }
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
-                            .background(Theme.safeGradient)
-                            .cornerRadius(16)
-                            .shadow(color: Theme.spaceGreen.opacity(0.4), radius: 10, x: 0, y: 5)
-                        }
-                        .buttonStyle(ScaleButtonStyle())
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    // 下部：項目別の小ウィジェット（カテゴリ）
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("予算別残り予算")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                            .padding(.horizontal, 20)
-                            
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 20) {
-                            if viewModel.categories.isEmpty {
-                                // カテゴリ未設定時の空状態UI
-                                VStack(spacing: 15) {
-                                    Image(systemName: "folder.badge.plus")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.gray.opacity(0.5))
-                                    Text("カテゴリがありません\n左上のメニューから設定してください")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                        .multilineTextAlignment(.center)
-                                }
-                                // グリッドの3列分の中央に配置するためのハック
-                                .frame(maxWidth: .infinity)
-                                .gridCellColumns(3)
-                                .padding(.top, 20)
-                            } else {
-                                ForEach(viewModel.categories) { category in
-                                    let ratio = category.totalAmount > 0 ? (category.spentAmount / category.totalAmount) : 0
-                                    NavigationLink(value: category.name) {
-                                        CategoryGaugeView(name: category.name, amount: Int(category.remainingAmount), ratio: ratio)
+
+                            // 借金警告（コンパクトピル）
+                            if viewModel.hasDebtFromLastMonth {
+                                Button(action: {
+                                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                                    generator.impactOccurred()
+                                    viewModel.showMonthlyReview = true
+                                }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.yellow)
+                                        Text("前月の借金あり｜タップして確認")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.yellow)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2)
+                                            .foregroundColor(.yellow.opacity(0.7))
                                     }
-                                    .simultaneousGesture(TapGesture().onEnded {
-                                        let generator = UIImpactFeedbackGenerator(style: .light)
-                                        generator.impactOccurred()
-                                    })
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.yellow.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
                                 }
                             }
+
+                            Button(action: {
+                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                generator.impactOccurred()
+                                viewModel.initialInputCategory = nil
+                                viewModel.showInputModal = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.title3)
+                                    Text(viewModel.isCurrentMonth ? "記録をつける" : "今月に記録する")
+                                        .fontWeight(.bold)
+                                }
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 18)
+                                .background(Theme.safeGradient)
+                                .cornerRadius(16)
+                                .shadow(color: Theme.spaceGreen.opacity(0.4), radius: 10, x: 0, y: 5)
+                            }
+                            .buttonStyle(ScaleButtonStyle())
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        .padding(.top, 10)
                         .padding(.horizontal, 20)
+
+                        // 下部：項目別の小ウィジェット（カテゴリ）
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("予算別残り予算")
+                                .font(.headline)
+                                .foregroundColor(.white.opacity(0.85))
+                                .shadow(color: .black.opacity(0.6), radius: 4)
+                                .padding(.horizontal, 15)
+
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 20) {
+                                if viewModel.categories.isEmpty {
+                                    // カテゴリ未設定時の空状態UI
+                                    VStack(spacing: 15) {
+                                        Image(systemName: "folder.badge.plus")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.gray.opacity(0.5))
+                                        Text("カテゴリがありません\n左上のメニューから設定してください")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    // グリッドの3列分の中央に配置するためのハック
+                                    .frame(maxWidth: .infinity)
+                                    .gridCellColumns(3)
+                                    .padding(.top, 20)
+                                } else {
+                                    ForEach(viewModel.categories) { category in
+                                        let ratio = category.totalAmount > 0 ? (category.spentAmount / category.totalAmount) : 0
+                                        NavigationLink(value: category.name) {
+                                            CategoryGaugeView(name: category.name, amount: Int(category.remainingAmount), ratio: ratio)
+                                        }
+                                        .simultaneousGesture(TapGesture().onEnded {
+                                            let generator = UIImpactFeedbackGenerator(style: .light)
+                                            generator.impactOccurred()
+                                        })
+                                    }
+                                }
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .padding(.top, 10)
+                            .padding(.horizontal, 10)
+                        }
+                        .padding(.vertical, 15)
+                        .padding(.horizontal, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.black.opacity(0.4))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                                )
+                        )
+                        .padding(.horizontal, 10)
+
+                        Spacer(minLength: 30)
                     }
-                
+                }
+            
+            // 宇宙飛行士マスコット（最前面レイヤー - 背景・コンテンツより手前に表示）
+            VStack {
+                HStack {
+                    Spacer()
+                    Image("astronaut_mascot")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100, height: 100)
+                        .shadow(color: .black.opacity(0.6), radius: 12, x: 0, y: 6)
+                        .padding(.top, 45)
+                        .padding(.trailing, 7)
+                }
                 Spacer()
             }
-            
+            .allowsHitTesting(false) // タッチイベントを透過させスクロールを妨げない
+
             // サイドメニューのオーバーレイ
             if viewModel.showSideMenu {
                 Color.black.opacity(0.5)
@@ -229,10 +250,35 @@ struct DashboardView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text(Date().formatted(.dateTime.weekday(.wide).month().day()))
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.gray)
+                // 年月セレクタ: ◀ 2026年3月 ▶
+                HStack(spacing: 14) {
+                    Button(action: {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
+                        viewModel.selectPreviousMonth()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+
+                    Text(viewModel.selectedMonthTitle)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(viewModel.isCurrentMonth ? .white : Theme.warmOrange)
+                        .animation(.easeInOut(duration: 0.2), value: viewModel.selectedMonthTitle)
+
+                    Button(action: {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
+                        viewModel.selectNextMonth()
+                    }) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(viewModel.isCurrentMonth ? .gray.opacity(0.35) : .white)
+                    }
+                    .disabled(viewModel.isCurrentMonth)
+                }
             }
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
@@ -346,57 +392,6 @@ extension View {
     }
 }
 
-// MARK: - Constellation Background (星座アニメーション・静的)
-struct ConstellationView: View {
-    // 星の数
-    let starCount = 35
-    @State private var stars: [CGPoint] = []
-    
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // 星同士を繋ぐ線 (星座線)
-                Path { path in
-                    for i in 0..<stars.count {
-                        // 近くの星（数個）と線を繋ぐ
-                        for j in (i+1)..<stars.count {
-                            let dist = hypot(stars[i].x - stars[j].x, stars[i].y - stars[j].y)
-                            if dist < 80 { // 距離が近い星だけを繋ぐ
-                                path.move(to: stars[i])
-                                path.addLine(to: stars[j])
-                            }
-                        }
-                    }
-                }
-                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                
-                // 星そのもの
-                ForEach(0..<stars.count, id: \.self) { index in
-                    Circle()
-                        .fill(Color.white.opacity(0.6))
-                        // インデックスを利用して星の大きさを1.5〜3.5の間で疑似ランダムに設定
-                        .frame(width: 1.5 + CGFloat(index % 3))
-                        .position(stars[index])
-                        .opacity(0.6 + (Double(index % 4) * 0.1))
-                }
-            }
-            .onAppear {
-                if stars.isEmpty {
-                    var newStars: [CGPoint] = []
-                    // 再描画時も座標が変わらないように一度だけ生成して保持する
-                    for _ in 0..<starCount {
-                        newStars.append(CGPoint(
-                            x: CGFloat.random(in: 0...geometry.size.width),
-                            y: CGFloat.random(in: 0...geometry.size.height)
-                        ))
-                    }
-                    stars = newStars
-                }
-            }
-        }
-        .allowsHitTesting(false)
-    }
-}
 
 // 押し込みアニメーション付きボタンスタイル
 struct ScaleButtonStyle: ButtonStyle {
@@ -414,33 +409,34 @@ struct BudgetGaugeView: View {
     
     var body: some View {
         ZStack {
-            // 背景のグロー
+            // 背景のグロー（星空背景に対してゲージを浮かび上がらせる）
             Circle()
-                .fill(Color.black.opacity(0.2))
+                .fill(Color.black.opacity(0.45))
                 .blur(radius: 20)
-            
+
             // 背景の円全体（ベース）
             Circle()
-                .stroke(Color.white.opacity(0.05), style: StrokeStyle(lineWidth: 35, lineCap: .butt))
+                .stroke(Color.white.opacity(0.12), style: StrokeStyle(lineWidth: 35, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
             
             // 宇宙飛行士モチーフはダッシュボード全体の右上に移動しました
             
-            let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 250000.0
-            let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 250000.0)
-            let displaySpent = (budget?.spentAmount ?? 100000.0) + fixedAndSavings
-            let spentRatio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.4
+            let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 0.0
+            let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 0.0)
+            let displaySpent = (budget?.spentAmount ?? 0.0) + fixedAndSavings
+            let spentRatio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.0
             let clampedRatio = min(max(spentRatio, 0), 1)
             
             // 使用済み（オレンジ〜赤グラデーション）
+            // startAngle: 0°（3時）→ rotationEffect(-90°) → 12時開始になるよう逆算
             Circle()
                 .trim(from: 0, to: animatedRatio)
                 .stroke(
                     AngularGradient(
                         gradient: Gradient(colors: [Theme.warmOrange, Theme.coralRed]),
                         center: .center,
-                        startAngle: .degrees(-90),
-                        endAngle: .degrees(270)
+                        startAngle: .degrees(0),
+                        endAngle: .degrees(360)
                     ),
                     style: StrokeStyle(lineWidth: 35, lineCap: .butt)
                 )
@@ -461,25 +457,25 @@ struct BudgetGaugeView: View {
             
             // 中央空洞への情報表示
             VStack(spacing: 2) {
-                let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 250000.0
-                let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 250000.0)
-                let displaySpent = (budget?.spentAmount ?? 100000.0) + fixedAndSavings
-                let spentRatio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.4
+                let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 0.0
+                let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 0.0)
+                let displaySpent = (budget?.spentAmount ?? 0.0) + fixedAndSavings
+                let spentRatio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.0
                 
                 Text("手取り総額: ¥\(Int(displayTotal))")
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.white.opacity(0.65))
                     .padding(.bottom, 2)
-                
+
                 Text("残額")
                     .font(.caption)
                     .fontWeight(.bold)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.white.opacity(0.7))
                 
                 let remainingColor: Color = (spentRatio > 0.8) ? Theme.coralRed : ((spentRatio > 0.5) ? Theme.warmOrange : Theme.textMain)
                 
-                Text("¥\(Int(budget?.remainingAmount ?? 150000))")
+                Text("¥\(Int(budget?.remainingAmount ?? 0))")
                     .font(.system(size: 34, weight: .black, design: .rounded))
                     .foregroundColor(remainingColor)
                     // グローエフェクト
@@ -493,7 +489,7 @@ struct BudgetGaugeView: View {
                 Text("使用済(固定費込)")
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.white.opacity(0.65))
                 
                 Text("¥\(Int(displaySpent))")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
@@ -516,23 +512,38 @@ struct BudgetGaugeView: View {
             }
         }
         .frame(width: 260, height: 260)
+        // ガラスパネル背景：星空背景からゲージを浮かび上がらせる
+        .background(
+            Circle()
+                .fill(Color.black.opacity(0.35))
+                .blur(radius: 5)
+        )
+        .overlay(
+            Circle()
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
         .padding(.vertical, 10)
         .onAppear {
             updateRatio()
         }
-        .onChange(of: budget?.spentAmount) { _, _ in
+        // targetRatio を監視: spentAmount / totalAmount / incomeAmount どれが変わっても対応
+        .onChange(of: targetRatio) { _, _ in
             updateRatio()
         }
     }
-    
+
+    /// 予算プロパティから計算した目標比率（0〜1）
+    private var targetRatio: Double {
+        let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 0.0
+        let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 0.0)
+        let displaySpent = (budget?.spentAmount ?? 0.0) + fixedAndSavings
+        let ratio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.0
+        return min(max(ratio, 0), 1)
+    }
+
     private func updateRatio() {
-        let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 250000.0
-        let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 250000.0)
-        let displaySpent = (budget?.spentAmount ?? 100000.0) + fixedAndSavings
-        let targetRatio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.4
-        let clampedTarget = min(max(targetRatio, 0), 1)
         withAnimation(.spring(response: 1.0, dampingFraction: 0.8)) {
-            animatedRatio = clampedTarget
+            animatedRatio = targetRatio
         }
     }
 }
@@ -560,22 +571,23 @@ struct CategoryGaugeView: View {
     
     var body: some View {
         ZStack {
-            // 背景の円全体（ベース）
+            // 背景の円全体（ベース）- 星空背景に対して視認性確保のため不透明度を上げる
             Circle()
-                .stroke(Color.white.opacity(0.05), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
+                .stroke(Color.white.opacity(0.15), style: StrokeStyle(lineWidth: 8, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
             
             let clampedRatio = min(max(ratio, 0), 1)
             
             // 使用済み（グラデーション）
+            // startAngle: 0°（3時）→ rotationEffect(-90°) → 12時開始になるよう逆算
             Circle()
                 .trim(from: 0, to: clampedRatio)
                 .stroke(
                     AngularGradient(
                         gradient: Gradient(colors: [Theme.warmOrange, Theme.coralRed]),
                         center: .center,
-                        startAngle: .degrees(-90),
-                        endAngle: .degrees(270)
+                        startAngle: .degrees(0),
+                        endAngle: .degrees(360)
                     ),
                     style: StrokeStyle(lineWidth: 8, lineCap: .butt)
                 )
@@ -595,13 +607,15 @@ struct CategoryGaugeView: View {
             VStack(spacing: 2) {
                 Text(name)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.white.opacity(0.85))
+                    .shadow(color: .black.opacity(0.5), radius: 2)
                 Text(amountString)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(amountColor)
+                    .shadow(color: amountColor.opacity(0.4), radius: 3)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8))
-                    .foregroundColor(.gray.opacity(0.6))
+                    .foregroundColor(.white.opacity(0.4))
             }
         }
         .frame(width: 80, height: 80)

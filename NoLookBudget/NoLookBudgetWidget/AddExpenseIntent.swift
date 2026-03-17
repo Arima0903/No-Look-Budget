@@ -22,8 +22,9 @@ struct AddExpenseIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        // AppGroupの共有コンテナからContextを取得
-        let context = SharedModelContainer.shared.mainContext
+        // 新鮮なコンテキストを生成（mainContext はキャッシュされており
+        // クロスプロセスでメインアプリが書き込んだカテゴリ変更を見逃す恐れがある）
+        let context = ModelContext(SharedModelContainer.shared)
         let service = TransactionService(context: context)
         
         let descriptor = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])

@@ -272,7 +272,9 @@ struct AnimatedOverCategoryRing: View {
                 Circle()
                     .trim(from: 0, to: animatedTrim)
                     .stroke(
-                        AngularGradient(gradient: Gradient(colors: [.orange, .red]), center: .center),
+                        // startAngle: 0°（3時）→ rotationEffect(-90°) → 12時開始になるよう逆算
+                        AngularGradient(gradient: Gradient(colors: [.orange, .red]), center: .center,
+                                        startAngle: .degrees(0), endAngle: .degrees(360)),
                         style: StrokeStyle(lineWidth: size * 0.1, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))

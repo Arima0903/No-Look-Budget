@@ -14,8 +14,11 @@ final class ExpenseTransaction {
     var isFixedCost: Bool
     var title: String?
     var fixedCostSettingId: UUID?
-    
-    init(date: Date = Date(), amount: Double, categoryId: UUID? = nil, isIOU: Bool = false, isIncome: Bool = false, isFixedCost: Bool = false, title: String? = nil, fixedCostSettingId: UUID? = nil) {
+
+    // メモ（任意・最大20文字）
+    var memo: String?
+
+    init(date: Date = Date(), amount: Double, categoryId: UUID? = nil, isIOU: Bool = false, isIncome: Bool = false, isFixedCost: Bool = false, title: String? = nil, fixedCostSettingId: UUID? = nil, memo: String? = nil) {
         self.date = date
         self.amount = amount
         self.categoryId = categoryId
@@ -24,5 +27,6 @@ final class ExpenseTransaction {
         self.isFixedCost = isFixedCost
         self.title = title
         self.fixedCostSettingId = fixedCostSettingId
+        self.memo = memo
     }
 }

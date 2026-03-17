@@ -25,6 +25,15 @@ class QuickInputViewModel: ObservableObject {
     
     @Published var alertMessage: String? = nil
     @Published var showAlert: Bool = false
+
+    // メモ（案B: 折りたたみ式）
+    @Published var memo: String = ""
+    @Published var showMemoField: Bool = false
+
+    // 入力完了ポップアップ
+    @Published var showCompletionPopup: Bool = false
+    @Published var completionAmount: String = ""
+    @Published var completionCategory: String = ""
     
     let initialCategoryName: String?
     var editingTransactionId: UUID?
@@ -115,34 +124,56 @@ class QuickInputViewModel: ObservableObject {
             
             let actualIOUAmount = totalAmount - myExpenseAmount
             
+            let memoValue = memo.isEmpty ? nil : memo
             if actualIOUAmount > 0 {
-                try? transactionService.addExpense(amount: actualIOUAmount, category: selectedCategory, isIOU: true)
+                try? transactionService.addExpense(amount: actualIOUAmount, category: selectedCategory, isIOU: true, memo: memoValue)
             }
             if myExpenseAmount > 0 {
-                try? transactionService.addExpense(amount: myExpenseAmount, category: selectedCategory, isIOU: false)
+                try? transactionService.addExpense(amount: myExpenseAmount, category: selectedCategory, isIOU: false, memo: memoValue)
             }
+            // 完了ポップアップ用データをセット（立替総額を表示）
+            self.completionAmount = "¥\(Int(totalAmount))"
+            self.completionCategory = (selectedCategory?.name ?? "その他") + "（立替含む）"
         } else {
             // 通常の1段入力の保存処理
             guard let finalResultString = calculateResult(),
                   let amount = Double(finalResultString), amount > 0 else { return false }
-            
+
+            let memoValue = memo.isEmpty ? nil : memo
             if let id = editingTransactionId {
                 if inputMode == .income {
                     try? transactionService.updateIncome(id: id, amount: amount)
                 } else {
-                    try? transactionService.updateExpense(id: id, amount: amount, category: selectedCategory, isIOU: false)
+                    try? transactionService.updateExpense(id: id, amount: amount, category: selectedCategory, isIOU: false, memo: memoValue)
                 }
             } else {
                 if inputMode == .income {
                     try? transactionService.addIncome(amount: amount)
                 } else {
-                    try? transactionService.addExpense(amount: amount, category: selectedCategory, isIOU: false)
+                    try? transactionService.addExpense(amount: amount, category: selectedCategory, isIOU: false, memo: memoValue)
                 }
+            }
+            // 完了ポップアップ用データをセット
+            self.completionAmount = "¥\(Int(amount))"
+            if inputMode == .income {
+                self.completionCategory = selectedIncomeCategory ?? "臨時収入"
+            } else {
+                self.completionCategory = selectedCategory?.name ?? "その他"
             }
         }
         
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         return true
+    }
+
+    // 完了ポップアップを閉じて次の入力に備えてフォームをリセット
+    func resetForNextEntry() {
+        expressionText = "0"
+        iouExpression = "0"
+        myExpenseExpression = "0"
+        memo = ""
+        showMemoField = false
+        showCompletionPopup = false
     }
 }

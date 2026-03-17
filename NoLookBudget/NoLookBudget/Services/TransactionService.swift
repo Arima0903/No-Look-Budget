@@ -3,13 +3,23 @@ import SwiftData
 import WidgetKit
 
 protocol TransactionServiceProtocol {
-    func addExpense(amount: Double, category: ItemCategory?, isIOU: Bool) throws
+    func addExpense(amount: Double, category: ItemCategory?, isIOU: Bool, memo: String?) throws
     func addIncome(amount: Double) throws
     func processMonthlyReview(currentDate: Date) throws
     func recoverDebt(sourceCategoryName: String, targetCategoryName: String, amount: Double) throws
-    func updateExpense(id: UUID, amount: Double, category: ItemCategory?, isIOU: Bool) throws
+    func updateExpense(id: UUID, amount: Double, category: ItemCategory?, isIOU: Bool, memo: String?) throws
     func updateIncome(id: UUID, amount: Double) throws
     func deleteTransaction(id: UUID) throws
+}
+
+// メモ引数を省略できるようにするデフォルト実装
+extension TransactionServiceProtocol {
+    func addExpense(amount: Double, category: ItemCategory?, isIOU: Bool) throws {
+        try addExpense(amount: amount, category: category, isIOU: isIOU, memo: nil)
+    }
+    func updateExpense(id: UUID, amount: Double, category: ItemCategory?, isIOU: Bool) throws {
+        try updateExpense(id: id, amount: amount, category: category, isIOU: isIOU, memo: nil)
+    }
 }
 
 @MainActor
@@ -34,11 +44,12 @@ class TransactionService: TransactionServiceProtocol {
     }
     
     // 支出または立替を追加する
-    func addExpense(amount: Double, category: ItemCategory?, isIOU: Bool) throws {
+    func addExpense(amount: Double, category: ItemCategory?, isIOU: Bool, memo: String? = nil) throws {
         guard amount > 0 else { return }
-        
+
         // 1. Transaction履歴の作成
-        let transaction = ExpenseTransaction(date: Date(), amount: amount, categoryId: category?.id, isIOU: isIOU, isIncome: false)
+        let trimmedMemo = memo.flatMap { $0.isEmpty ? nil : String($0.prefix(20)) }
+        let transaction = ExpenseTransaction(date: Date(), amount: amount, categoryId: category?.id, isIOU: isIOU, isIncome: false, memo: trimmedMemo)
         context.insert(transaction)
         
         // 2. 状態の更新
@@ -91,7 +102,14 @@ class TransactionService: TransactionServiceProtocol {
         // オーバー分が存在すれば初めからspentAmountに加算する（借金として持つ）
         let initialSpent = overAmount > 0 ? overAmount : 0.0
         
-        let nextBudget = Budget(month: nextMonth, totalAmount: newTotal, spentAmount: initialSpent)
+        // 手取り額と先取り貯金を前月から引き継ぐ（次月開設時に再設定不要にする）
+        let nextBudget = Budget(
+            month: nextMonth,
+            totalAmount: newTotal,
+            spentAmount: initialSpent,
+            incomeAmount: currentBudget.incomeAmount,
+            savingsAmount: currentBudget.savingsAmount
+        )
         context.insert(nextBudget)
         
         try context.save()
@@ -117,7 +135,7 @@ class TransactionService: TransactionServiceProtocol {
     }
     
     // 既存の支出/立替を更新する
-    func updateExpense(id: UUID, amount: Double, category: ItemCategory?, isIOU: Bool) throws {
+    func updateExpense(id: UUID, amount: Double, category: ItemCategory?, isIOU: Bool, memo: String? = nil) throws {
         let descriptor = FetchDescriptor<ExpenseTransaction>(predicate: #Predicate { $0.id == id })
         guard let transaction = try? context.fetch(descriptor).first else { return }
         
@@ -144,6 +162,7 @@ class TransactionService: TransactionServiceProtocol {
         transaction.categoryId = category?.id
         transaction.isIOU = isIOU
         transaction.isIncome = false
+        transaction.memo = memo.flatMap { $0.isEmpty ? nil : String($0.prefix(20)) }
         
         if !isIOU {
             // 新が通常支出の場合のみ、Budget・Categoryに加算
@@ -207,6 +226,54 @@ class TransactionService: TransactionServiceProtocol {
     }
     
     private func reloadWidgets() {
+        saveWidgetSnapshot()
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// App Group UserDefaults にウィジェット用スナップショットを書き込む
+    private func saveWidgetSnapshot() {
+        let suiteName = "group.com.arima0903.NoLookBudget"
+        let key = "widget_budget_snapshot_v1"
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+
+        // 当月予算を取得
+        let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
+        let budgets = (try? context.fetch(budgetDesc)) ?? []
+        let calendar = Calendar.current
+        let currentYM = calendar.dateComponents([.year, .month], from: Date())
+        let budget = budgets.first(where: {
+            let c = calendar.dateComponents([.year, .month], from: $0.month)
+            return c.year == currentYM.year && c.month == currentYM.month
+        }) ?? budgets.first
+
+        let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 0.0
+        let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 0.0)
+        let budgetSpent = (budget?.spentAmount ?? 0.0) + fixedAndSavings
+
+        // カテゴリを取得
+        let catDesc = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])
+        let cats = (try? context.fetch(catDesc)) ?? []
+
+        // JSON エンコードして保存
+        struct CatSnap: Encodable {
+            let name: String; let remainingAmount: Int; let ratio: Double
+        }
+        struct Snap: Encodable {
+            let budgetTotal: Double; let budgetSpent: Double; let categories: [CatSnap]
+        }
+        let snap = Snap(
+            budgetTotal: displayTotal,
+            budgetSpent: budgetSpent,
+            categories: cats.prefix(6).map {
+                CatSnap(
+                    name: $0.name,
+                    remainingAmount: Int($0.totalAmount - $0.spentAmount),
+                    ratio: $0.totalAmount > 0 ? ($0.spentAmount / $0.totalAmount) : 0.0
+                )
+            }
+        )
+        if let encoded = try? JSONEncoder().encode(snap) {
+            defaults.set(encoded, forKey: key)
+        }
     }
 }

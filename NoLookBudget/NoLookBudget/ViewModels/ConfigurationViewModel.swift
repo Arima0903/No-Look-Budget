@@ -44,13 +44,25 @@ class ConfigurationViewModel: ObservableObject {
     }
     
     func fetchData() {
-        // 現在の予算を取得
+        // 現在の予算を取得（当月優先、なければ最新）
         let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
-        if let currentBudget = (try? context.fetch(budgetDesc))?.first {
-            if let income = currentBudget.incomeAmount {
+        let budgets = (try? context.fetch(budgetDesc)) ?? []
+
+        let calendar = Calendar.current
+        let currentYearMonth = calendar.dateComponents([.year, .month], from: Date())
+
+        let targetBudget = budgets.first(where: {
+            let bComponents = calendar.dateComponents([.year, .month], from: $0.month)
+            return bComponents.year == currentYearMonth.year && bComponents.month == currentYearMonth.month
+        }) ?? budgets.first
+
+        if let budget = targetBudget {
+            // incomeAmount/savingsAmount が設定済みの場合のみ読み込む
+            // 設定されていない場合は空文字のままにして、saveBudget() で上書きされないようにする
+            if let income = budget.incomeAmount {
                 self.incomeAmount = "\(Int(income))"
             }
-            if let savings = currentBudget.savingsAmount {
+            if let savings = budget.savingsAmount {
                 self.savingsAmount = "\(Int(savings))"
             }
         }
@@ -84,10 +96,22 @@ class ConfigurationViewModel: ObservableObject {
             context.insert(currentBudget)
         }
         
-        let income = Double(incomeAmount) ?? 0
-        let savings = Double(savingsAmount) ?? 0
+        // 入力があった場合のみ更新する（空フィールドは既存値を保持して 0 上書きを防ぐ）
+        let newIncome = Double(incomeAmount)
+        let newSavings = Double(savingsAmount)
+
+        if let income = newIncome {
+            currentBudget.incomeAmount = income
+        }
+        if let savings = newSavings {
+            currentBudget.savingsAmount = savings
+        }
+
+        // 計算には入力値 or 既存値を使う（どちらもなければ 0）
+        let income = newIncome ?? currentBudget.incomeAmount ?? 0
+        let savings = newSavings ?? currentBudget.savingsAmount ?? 0
         let totalFixed = fixedCosts.reduce(0) { $0 + $1.amount }
-        
+
         // 当月の臨時収入の合計を取得してベース予算に合算する
         var extraIncomeTotal: Double = 0
         if let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: currentBudget.month)),
@@ -100,11 +124,8 @@ class ConfigurationViewModel: ObservableObject {
                 extraIncomeTotal = incomes.reduce(0) { $0 + $1.amount }
             }
         }
-        
+
         let calculatedBaseBudget = income - savings - totalFixed + extraIncomeTotal
-        
-        currentBudget.incomeAmount = income
-        currentBudget.savingsAmount = savings
         // 自由に使える変動費のベース予算を上書き
         currentBudget.totalAmount = max(0, calculatedBaseBudget)
         
@@ -285,6 +306,51 @@ class ConfigurationViewModel: ObservableObject {
     }
     
     private func reloadWidgets() {
+        saveWidgetSnapshot()
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// App Group UserDefaults にウィジェット用スナップショットを書き込む
+    private func saveWidgetSnapshot() {
+        let suiteName = "group.com.arima0903.NoLookBudget"
+        let key = "widget_budget_snapshot_v1"
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+
+        let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
+        let budgets = (try? context.fetch(budgetDesc)) ?? []
+        let calendar = Calendar.current
+        let currentYM = calendar.dateComponents([.year, .month], from: Date())
+        let budget = budgets.first(where: {
+            let c = calendar.dateComponents([.year, .month], from: $0.month)
+            return c.year == currentYM.year && c.month == currentYM.month
+        }) ?? budgets.first
+
+        let displayTotal = budget?.incomeAmount ?? budget?.totalAmount ?? 0.0
+        let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 0.0)
+        let budgetSpent = (budget?.spentAmount ?? 0.0) + fixedAndSavings
+
+        let catDesc = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])
+        let cats = (try? context.fetch(catDesc)) ?? []
+
+        struct CatSnap: Encodable {
+            let name: String; let remainingAmount: Int; let ratio: Double
+        }
+        struct Snap: Encodable {
+            let budgetTotal: Double; let budgetSpent: Double; let categories: [CatSnap]
+        }
+        let snap = Snap(
+            budgetTotal: displayTotal,
+            budgetSpent: budgetSpent,
+            categories: cats.prefix(6).map {
+                CatSnap(
+                    name: $0.name,
+                    remainingAmount: Int($0.totalAmount - $0.spentAmount),
+                    ratio: $0.totalAmount > 0 ? ($0.spentAmount / $0.totalAmount) : 0.0
+                )
+            }
+        )
+        if let encoded = try? JSONEncoder().encode(snap) {
+            defaults.set(encoded, forKey: key)
+        }
     }
 }

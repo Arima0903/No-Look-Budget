@@ -55,6 +55,28 @@ struct QuickInputModalView: View {
                 }
             }
             
+            // 入力完了ポップアップ（ZStack最前面）
+            if viewModel.showCompletionPopup {
+                CompletionPopupView(
+                    amount: viewModel.completionAmount,
+                    category: viewModel.completionCategory,
+                    isEditing: viewModel.editingTransactionId != nil
+                ) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        viewModel.showCompletionPopup = false
+                    }
+                    if viewModel.editingTransactionId != nil {
+                        // 編集モードは完了後そのままモーダルを閉じる
+                        dismiss()
+                    } else {
+                        // 新規入力モードはフォームリセットして継続入力可能に
+                        viewModel.resetForNextEntry()
+                    }
+                }
+                .transition(.scale(scale: 0.88).combined(with: .opacity))
+                .zIndex(10)
+            }
+
             VStack(spacing: 20) {
                 // Handle for modal
                 Capsule()
@@ -263,8 +285,12 @@ struct QuickInputModalView: View {
                     }
                 }
                 
+                // メモ欄（折りたたみ式・案B）
+                MemoInputSection(memo: $viewModel.memo, isExpanded: $viewModel.showMemoField)
+                    .padding(.horizontal, 20)
+
                 Spacer(minLength: 10)
-                
+
                 // 電卓キーパッド (下部)
                 let activeBinding = Binding<String>(
                     get: {
@@ -305,12 +331,177 @@ struct QuickInputModalView: View {
     
     private func submitExpense() {
         if viewModel.logExpense() {
-            dismiss()
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                viewModel.showCompletionPopup = true
+            }
         }
     }
 }
 
 // MARK: - Subviews
+
+// 入力完了ポップアップ
+private struct CompletionPopupView: View {
+    let amount: String
+    let category: String
+    let isEditing: Bool
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            // 背景の暗幕（タップでも閉じる）
+            Color.black.opacity(0.65)
+                .ignoresSafeArea()
+                .onTapGesture { onDismiss() }
+
+            VStack(spacing: 24) {
+                // チェックマークアイコン
+                ZStack {
+                    Circle()
+                        .fill(Theme.spaceGreen.opacity(0.15))
+                        .frame(width: 84, height: 84)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 52))
+                        .foregroundColor(Theme.spaceGreen)
+                        .shadow(color: Theme.spaceGreen.opacity(0.5), radius: 10)
+                }
+
+                // タイトル + 金額 + 品目
+                VStack(spacing: 6) {
+                    Text(isEditing ? "更新しました" : "入力完了しました")
+                        .font(.headline)
+                        .foregroundColor(.gray)
+
+                    Text(amount)
+                        .font(.system(size: 44, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.spaceGreen)
+                        .shadow(color: Theme.spaceGreen.opacity(0.4), radius: 8)
+
+                    Text(category)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+
+                // OK ボタン
+                Button(action: onDismiss) {
+                    Text(isEditing ? "閉じる" : "OK（続けて入力）")
+                        .font(.headline.bold())
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Theme.safeGradient)
+                        .cornerRadius(14)
+                        .shadow(color: Theme.spaceGreen.opacity(0.3), radius: 8)
+                }
+                .buttonStyle(ScaleButtonStyle())
+            }
+            .padding(30)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color(red: 0.06, green: 0.08, blue: 0.15))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+            )
+            .shadow(color: .black.opacity(0.5), radius: 30)
+            .padding(.horizontal, 36)
+        }
+    }
+}
+
+// メモ入力セクション（折りたたみ式）
+private struct MemoInputSection: View {
+    @Binding var memo: String
+    @Binding var isExpanded: Bool
+    @FocusState private var isFocused: Bool
+
+    private let maxLength = 20
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if isExpanded {
+                // 展開状態: テキストフィールド + 文字数カウンター
+                HStack(spacing: 8) {
+                    Image(systemName: "note.text")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+
+                    TextField("メモ（任意）", text: $memo)
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                        .focused($isFocused)
+                        .onChange(of: memo) { _, newValue in
+                            if newValue.count > maxLength {
+                                memo = String(newValue.prefix(maxLength))
+                            }
+                        }
+
+                    Text("\(memo.count)/\(maxLength)")
+                        .font(.caption2)
+                        .foregroundColor(memo.count >= maxLength ? Theme.coralRed : .gray)
+                        .monospacedDigit()
+
+                    // 閉じるボタン
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            isExpanded = false
+                            isFocused = false
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.gray.opacity(0.7))
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                        )
+                )
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 0.95).combined(with: .opacity),
+                    removal: .opacity
+                ))
+                .onAppear { isFocused = true }
+            } else {
+                // 折りたたみ状態: 「＋ メモを追加」ボタン
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isExpanded = true
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: memo.isEmpty ? "plus.circle" : "note.text")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+
+                        if memo.isEmpty {
+                            Text("メモを追加")
+                                .font(.system(size: 13))
+                                .foregroundColor(.gray)
+                        } else {
+                            // 入力済みのメモを省略表示
+                            Text(memo)
+                                .font(.system(size: 13))
+                                .foregroundColor(.white.opacity(0.8))
+                                .lineLimit(1)
+                        }
+
+                        Spacer()
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+    }
+}
 
 struct CategorySelectButton: View {
     let title: String
@@ -375,7 +566,7 @@ struct CalculatorKeypad: View {
                             generator.impactOccurred()
                             handleButtonTap(btn)
                         }) {
-                            Text(btn == "=" ? (isEditing ? "更新" : (inputMode == .income ? "追加" : (isIOUMode ? "立替" : "使う"))) : btn)
+                            Text(btn == "=" ? (isEditing ? "更新" : "確定") : btn)
                                 .font(.system(size: btn == "=" ? 20 : 26, weight: .bold, design: .rounded))
                                 .foregroundColor(foregroundColor(for: btn))
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
