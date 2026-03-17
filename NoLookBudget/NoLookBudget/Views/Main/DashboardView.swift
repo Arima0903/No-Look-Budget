@@ -47,7 +47,8 @@ struct DashboardView: View {
                                     budget: viewModel.currentBudget,
                                     recentTransactions: viewModel.recentTransactions,
                                     dailyTrends: viewModel.dailyTrends,
-                                    onDelete: viewModel.deleteRecentTransaction
+                                    onDelete: viewModel.deleteRecentTransaction,
+                                    onTransactionEdited: { viewModel.fetchData() }
                                 )) {
                                     BudgetGaugeView(budget: viewModel.currentBudget)
                                         .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
@@ -635,7 +636,8 @@ struct BudgetDetailView: View {
     var recentTransactions: [TransactionDisplayItem]
     var dailyTrends: [DailyBudgetTrend]
     var onDelete: (IndexSet) -> Void
-    
+    var onTransactionEdited: (() -> Void)? = nil
+
     @State private var editingTransaction: TransactionDisplayItem? = nil
     
     var body: some View {
@@ -791,7 +793,9 @@ struct BudgetDetailView: View {
         }
         .navigationTitle("今月の全体予算")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $editingTransaction) { tx in
+        .sheet(item: $editingTransaction, onDismiss: {
+            onTransactionEdited?()
+        }) { tx in
             QuickInputModalView(
                 initialCategoryName: tx.isIncome ? nil : tx.category,
                 editingTransactionId: tx.id,
@@ -800,6 +804,7 @@ struct BudgetDetailView: View {
                 isIOU: tx.iouAmount > 0
             )
             .presentationDetents([.fraction(0.85), .large])
+            .preferredColorScheme(.dark)
         }
     }
 }
