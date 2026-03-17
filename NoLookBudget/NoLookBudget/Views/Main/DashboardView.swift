@@ -307,7 +307,7 @@ struct DashboardView: View {
         }) {
             QuickInputModalView(initialCategoryName: viewModel.initialInputCategory)
                 .preferredColorScheme(.dark)
-                .presentationDetents([.fraction(0.85), .large])
+                .presentationDetents([.large])
         }
         .sheet(isPresented: $viewModel.showSettings, onDismiss: {
             viewModel.fetchData()
@@ -803,7 +803,7 @@ struct BudgetDetailView: View {
                 isIncome: tx.isIncome,
                 isIOU: tx.iouAmount > 0
             )
-            .presentationDetents([.fraction(0.85), .large])
+            .presentationDetents([.large])
             .preferredColorScheme(.dark)
         }
     }

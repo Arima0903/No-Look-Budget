@@ -177,7 +177,7 @@ class DashboardViewModel: ObservableObject {
             if tx.isFixedCost {
                 catName = tx.title ?? "固定費"
             } else {
-                catName = tx.categoryId.flatMap { categoryDict[$0] } ?? (tx.isIncome ? "臨時収入" : "不明")
+                catName = tx.categoryId.flatMap { categoryDict[$0] } ?? (tx.isIncome ? "収入" : "不明")
             }
             let totalAmount = Int(tx.amount)
             let iouAmount = tx.isIOU ? Int(tx.amount) : 0

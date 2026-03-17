@@ -39,22 +39,6 @@ struct QuickInputModalView: View {
                 .transition(.opacity)
             }
             
-            // 右下にマスコットを薄く表示 (透かしのように)
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Image("astronaut_mascot")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 80, height: 80)
-                        .blendMode(.screen) // 追加: 黒背景を透過(合成)させる
-                        .opacity(0.2)
-                        .padding(.bottom, 20)
-                        .padding(.trailing, 20)
-                }
-            }
-            
             // 入力完了ポップアップ（ZStack最前面）
             if viewModel.showCompletionPopup {
                 CompletionPopupView(
@@ -99,7 +83,7 @@ struct QuickInputModalView: View {
                     // 支出・収入のセグメント切替
                     Picker("入力モード", selection: $viewModel.inputMode.animation(.spring())) {
                         Text("支出").tag(QuickInputMode.expense)
-                        Text("臨時収入").tag(QuickInputMode.income)
+                        Text("収入").tag(QuickInputMode.income)
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 150)
@@ -220,8 +204,6 @@ struct QuickInputModalView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.4)
                             .frame(maxWidth: .infinity, alignment: .trailing)
-                            .contentTransition(.numericText(value: Double(viewModel.expressionText) ?? 0))
-                            .animation(.spring(), value: viewModel.expressionText)
                         
                         if let result = viewModel.calculateResult(), result != viewModel.expressionText {
                             Text("= ¥\(result)")
@@ -557,9 +539,9 @@ struct CalculatorKeypad: View {
     ]
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             ForEach(buttons, id: \.self) { row in
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     ForEach(row, id: \.self) { btn in
                         Button(action: {
                             let generator = UIImpactFeedbackGenerator(style: .light)
@@ -567,11 +549,12 @@ struct CalculatorKeypad: View {
                             handleButtonTap(btn)
                         }) {
                             Text(btn == "=" ? (isEditing ? "更新" : "確定") : btn)
-                                .font(.system(size: btn == "=" ? 20 : 26, weight: .bold, design: .rounded))
+                                .font(.system(size: btn == "=" ? 18 : 24, weight: .bold, design: .rounded))
                                 .foregroundColor(foregroundColor(for: btn))
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 58)
                                 .background(backgroundView(for: btn))
-                                .clipShape(Circle())
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
                                 .shadow(color: shadowColor(for: btn), radius: btn == "=" ? 10 : 0, x: 0, y: btn == "=" ? 5 : 0)
                         }
                         .buttonStyle(ScaleButtonStyle())
@@ -610,7 +593,7 @@ struct CalculatorKeypad: View {
     
     private func foregroundColor(for button: String) -> Color {
         switch button {
-        case "=": return (inputMode == .income || isIOUMode) ? .white : .black
+        case "=": return isIOUMode ? .white : .black
         case "C", "⌫", "％", "÷", "×", "-", "+": return .gray
         default: return .white
         }

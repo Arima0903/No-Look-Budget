@@ -126,7 +126,7 @@ struct TransactionHistoryView: View {
                     isIncome: tx.isIncome,
                     isIOU: tx.iouAmount > 0
                 )
-                .presentationDetents([.fraction(0.85), .large])
+                .presentationDetents([.large])
             }
         }
         .onAppear {

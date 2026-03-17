@@ -156,7 +156,7 @@ class QuickInputViewModel: ObservableObject {
             // 完了ポップアップ用データをセット
             self.completionAmount = "¥\(Int(amount))"
             if inputMode == .income {
-                self.completionCategory = selectedIncomeCategory ?? "臨時収入"
+                self.completionCategory = selectedIncomeCategory ?? "収入"
             } else {
                 self.completionCategory = selectedCategory?.name ?? "その他"
             }

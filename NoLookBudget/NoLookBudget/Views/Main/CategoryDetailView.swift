@@ -116,7 +116,7 @@ struct CategoryDetailView: View {
                                 ForEach(viewModel.transactions) { tx in
                                     HistoryRowView(
                                         date: tx.date,
-                                        memo: tx.iouAmount > 0 ? "立替" : (tx.isIncome ? "臨時収入" : "支出"),
+                                        memo: tx.iouAmount > 0 ? "立替" : (tx.isIncome ? "収入" : "支出"),
                                         amount: tx.totalAmount
                                     )
                                 }
