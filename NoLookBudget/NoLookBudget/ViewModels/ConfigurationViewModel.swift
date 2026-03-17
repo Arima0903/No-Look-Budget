@@ -25,9 +25,12 @@ class ConfigurationViewModel: ObservableObject {
     @Published var draftCategoryName: String = ""
     @Published var draftCategoryAmount: String = ""
     
-    // バリデーション用
+    // 「その他」カテゴリ名定数
+    static let otherCategoryName = "その他"
+
+    // バリデーション用（「その他」は常時存在するため除いた数で判定）
     var canAddCategory: Bool {
-        categories.count < 6
+        categories.filter { $0.name != Self.otherCategoryName }.count < 5
     }
     
     var isCategoryNameValid: Bool {
@@ -131,8 +134,10 @@ class ConfigurationViewModel: ObservableObject {
         
         // 固定費の履歴(Transaction)を当月分同期する
         syncFixedCostTransactions(for: currentBudget.month)
-        
+
         try? context.save()
+        // 「その他」カテゴリを同期（全体予算が変わったため残額を再計算）
+        syncOtherCategory()
         reloadWidgets()
         fetchData()
     }
@@ -255,39 +260,47 @@ class ConfigurationViewModel: ObservableObject {
     func saveCategory() {
         guard !draftCategoryName.isEmpty,
               let amount = Double(draftCategoryAmount) else { return }
-        
+
         if let category = editingCategory {
             category.name = draftCategoryName
             category.totalAmount = amount
         } else {
-            let nextIndex = categories.count
-            let newCat = ItemCategory(name: draftCategoryName, totalAmount: amount, spentAmount: 0, orderIndex: nextIndex)
+            // 「その他」カテゴリの直前に挿入する
+            let insertIndex = categories.firstIndex(where: { $0.name == Self.otherCategoryName }) ?? categories.count
+            // 挿入位置以降の orderIndex をずらす
+            for i in insertIndex..<categories.count {
+                categories[i].orderIndex = i + 1
+            }
+            let newCat = ItemCategory(name: draftCategoryName, totalAmount: amount, spentAmount: 0, orderIndex: insertIndex)
             context.insert(newCat)
-            categories.append(newCat)
+            categories.insert(newCat, at: insertIndex)
         }
-        
+
         try? context.save()
+        syncOtherCategory()
         reloadWidgets()
         fetchData()
         showCategoryModal = false
     }
-    
-    // カテゴリの削除
+
+    // カテゴリの削除（「その他」は削除不可）
     func deleteCategories(at offsets: IndexSet) {
-        offsets.forEach { index in
-            let cat = categories[index]
-            context.delete(cat)
+        // 「その他」を除外してから削除
+        let deletableOffsets = offsets.filter { categories[$0].name != Self.otherCategoryName }
+        deletableOffsets.forEach { index in
+            context.delete(categories[index])
         }
-        
+
         // 並び順の再計算
-        categories.remove(atOffsets: offsets)
+        categories.remove(atOffsets: IndexSet(deletableOffsets))
         for (index, cat) in categories.enumerated() {
             cat.orderIndex = index
         }
-        
+
         // ※ 紐づくトランザクションのcategoryIdをnilにする等の処理はTransactionServiceで後ほど対応可能
-        
+
         try? context.save()
+        syncOtherCategory()
         reloadWidgets()
         fetchData()
     }
@@ -305,6 +318,44 @@ class ConfigurationViewModel: ObservableObject {
         reloadWidgets()
     }
     
+    /// 「その他」カテゴリを自動管理する
+    /// - 存在しない場合は作成（常に最後尾）
+    /// - totalAmount = max(0, 全体変動費予算 - 他カテゴリ合算)
+    private func syncOtherCategory() {
+        // 当月のベース予算を取得
+        let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
+        let budgets = (try? context.fetch(budgetDesc)) ?? []
+        let cal = Calendar.current
+        let currentYM = cal.dateComponents([.year, .month], from: Date())
+        let totalBudget = budgets.first(where: {
+            let c = cal.dateComponents([.year, .month], from: $0.month)
+            return c.year == currentYM.year && c.month == currentYM.month
+        })?.totalAmount ?? budgets.first?.totalAmount ?? 0
+
+        // 全カテゴリを取得
+        let catDesc = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])
+        let allCats = (try? context.fetch(catDesc)) ?? []
+        let regularCats = allCats.filter { $0.name != Self.otherCategoryName }
+        let regularTotal = regularCats.reduce(0) { $0 + $1.totalAmount }
+        let otherAmount = max(0, totalBudget - regularTotal)
+
+        if let otherCat = allCats.first(where: { $0.name == Self.otherCategoryName }) {
+            // 既存の「その他」を更新（常に最後尾に配置）
+            otherCat.totalAmount = otherAmount
+            otherCat.orderIndex = regularCats.count
+        } else {
+            // 初回: 「その他」を作成
+            let newOtherCat = ItemCategory(
+                name: Self.otherCategoryName,
+                totalAmount: otherAmount,
+                spentAmount: 0,
+                orderIndex: regularCats.count
+            )
+            context.insert(newOtherCat)
+        }
+        try? context.save()
+    }
+
     private func reloadWidgets() {
         saveWidgetSnapshot()
         WidgetCenter.shared.reloadAllTimelines()

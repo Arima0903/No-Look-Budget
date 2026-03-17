@@ -9,24 +9,38 @@ struct CategoryConfigurationView: View {
         List {
             Section(header: Text("変動費カテゴリ (スワイプで削除、長押しで並び替え)").foregroundColor(.gray)) {
                 ForEach(viewModel.categories) { category in
+                    let isOther = category.name == ConfigurationViewModel.otherCategoryName
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(category.name)
-                                .font(.body.bold())
-                                .foregroundColor(.white)
+                            HStack(spacing: 4) {
+                                Text(category.name)
+                                    .font(.body.bold())
+                                    .foregroundColor(.white)
+                                if isOther {
+                                    Text("自動")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(.white.opacity(0.6))
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 2)
+                                        .background(Color.white.opacity(0.15))
+                                        .cornerRadius(4)
+                                }
+                            }
                             Text("予算: ¥\(Int(category.totalAmount))")
                                 .font(.caption)
-                                .foregroundColor(.gray)
+                                .foregroundColor(isOther ? .white.opacity(0.5) : .gray)
                         }
                         Spacer()
-                        Button(action: {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.impactOccurred()
-                            viewModel.prepareEditingCategory(category)
-                        }) {
-                            Image(systemName: "pencil.circle.fill")
-                                .foregroundColor(.yellow)
-                                .font(.system(size: 22))
+                        if !isOther {
+                            Button(action: {
+                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                generator.impactOccurred()
+                                viewModel.prepareEditingCategory(category)
+                            }) {
+                                Image(systemName: "pencil.circle.fill")
+                                    .foregroundColor(.yellow)
+                                    .font(.system(size: 22))
+                            }
                         }
                     }
                     .padding(.vertical, 4)

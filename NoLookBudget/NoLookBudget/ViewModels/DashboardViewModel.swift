@@ -129,10 +129,15 @@ class DashboardViewModel: ObservableObject {
         self.categories = (try? context.fetch(catDesc)) ?? []
 
         // 前月の借金フラグの計算（当月表示中のみ有効）
+        // budgets[1]への依存を避け、年月一致で前月レコードを正確に特定する
         self.hasDebtFromLastMonth = false
-        if isCurrentMonth && budgets.count > 1 {
-            let previousBudget = budgets[1]
-            if previousBudget.spentAmount > previousBudget.totalAmount && !previousBudget.hasSetDebtRecovery {
+        if isCurrentMonth,
+           let prevMonthDate = calendar.date(byAdding: .month, value: -1, to: Date()) {
+            let prevYM = calendar.dateComponents([.year, .month], from: prevMonthDate)
+            if let prev = budgets.first(where: {
+                let c = calendar.dateComponents([.year, .month], from: $0.month)
+                return c.year == prevYM.year && c.month == prevYM.month
+            }), prev.spentAmount > prev.totalAmount, !prev.hasSetDebtRecovery {
                 self.hasDebtFromLastMonth = true
             }
         }
