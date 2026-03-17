@@ -1,14 +1,19 @@
 import SwiftUI
+import WidgetKit
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var notificationsEnabled = true
     @State private var themeSelection = 0 // 0: Auto, 1: Dark, 2: Light
     @State private var hapticEnabled = true
     @State private var showPaywall = false
-    
+    @State private var lockScreenHideNumbers = false
+
     @AppStorage("isPremiumEnabled") private var isPremiumEnabled = false
+
+    private let appGroupSuite = "group.com.arima0903.NoLookBudget"
+    private let hideNumbersKey = "lockScreen_hide_numbers"
     
     var body: some View {
         NavigationStack {
@@ -55,6 +60,31 @@ struct SettingsView: View {
                 .listRowBackground(Color.white.opacity(0.05))
                 #endif
                 
+                // ロック画面ウィジェット設定（Premium）
+                Section(header: Text("ロック画面ウィジェット").foregroundColor(.gray)) {
+                    HStack {
+                        Toggle("数値をプライベートモードにする", isOn: isPremiumEnabled ? $lockScreenHideNumbers : .constant(false))
+                            .tint(.yellow)
+                            .disabled(!isPremiumEnabled)
+                            .onChange(of: lockScreenHideNumbers) { _, newValue in
+                                guard isPremiumEnabled else { return }
+                                UserDefaults(suiteName: appGroupSuite)?.set(newValue, forKey: hideNumbersKey)
+                                WidgetCenter.shared.reloadAllTimelines()
+                            }
+                        if !isPremiumEnabled {
+                            Image(systemName: "lock.fill")
+                                .foregroundColor(.gray)
+                                .font(.system(size: 14))
+                        }
+                    }
+                    if !isPremiumEnabled {
+                        Text("Premiumプランで利用可能。ロック画面に表示する数値を隠します。")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+                .listRowBackground(Color.white.opacity(0.05))
+
                 // サポート・その他
                 Section(header: Text("その他").foregroundColor(.gray)) {
                     NavigationLink("使い方・ウィジェットの置き方", destination: Text("Guide"))
@@ -92,6 +122,10 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
+            }
+            .onAppear {
+                // App Group から設定値を読み込む
+                lockScreenHideNumbers = UserDefaults(suiteName: appGroupSuite)?.bool(forKey: hideNumbersKey) ?? false
             }
         }
     }
