@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbit Budget - Privacy Policy / プライバシーポリシー</title>
+    <style>
+        :root {
+            --space-navy: #080B14;
+            --space-navy-light: #1A1A2E;
+            --mint-green: #66E699;
+            --mint-green-dim: rgba(102, 230, 153, 0.08);
+            --mint-green-border: rgba(102, 230, 153, 0.3);
+            --accent-blue: #66B3FF;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(156, 163, 175, 0.85);
+            --text-muted: #6B7280;
+            --card-bg: rgba(255, 255, 255, 0.04);
+            --card-border: rgba(255, 255, 255, 0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--space-navy);
+            color: var(--text-secondary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        /* 上部グロー効果 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(102, 230, 153, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 60px 24px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ヘッダー */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header .app-icon {
+            width: 72px;
+            height: 72px;
+            margin-bottom: 16px;
+            display: inline-block;
+            background: linear-gradient(135deg, var(--mint-green), #33CC80);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 36px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .header .subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .last-updated {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+
+        /* 言語ナビゲーション */
+        .lang-nav {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        .lang-nav a {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .lang-nav a.active {
+            background: linear-gradient(135deg, var(--mint-green), #33CC80);
+            color: #000;
+        }
+
+        .lang-nav a:not(.active) {
+            background: var(--card-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--card-border);
+        }
+
+        .lang-nav a:hover {
+            opacity: 0.85;
+        }
+
+        /* ハイライトボックス */
+        .highlight-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            background: var(--mint-green-dim);
+            border: 1px solid var(--mint-green-border);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .highlight-box .icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .highlight-box p {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* セクション */
+        .section {
+            margin-bottom: 16px;
+        }
+
+        .section-card {
+            padding: 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .section-card h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+        }
+
+        .section-card p {
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        /* 区切り線 */
+        .divider {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            margin: 48px 0;
+        }
+
+        /* 英語セクションヘッダー */
+        .en-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .en-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .en-header p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* フッター */
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 32px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .footer p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 480px) {
+            .container {
+                padding: 40px 16px 60px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .en-header h2 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- ヘッダー -->
+    <div class="header">
+        <div class="app-icon">&#x1F680;</div>
+        <h1>Orbit Budget</h1>
+        <p class="subtitle">プライバシーポリシー / Privacy Policy</p>
+    </div>
+
+    <p class="last-updated">最終更新日 / Last Updated: 2026-03-19</p>
+
+    <!-- 言語ナビゲーション -->
+    <nav class="lang-nav">
+        <a href="#ja" class="active">日本語</a>
+        <a href="#en">English</a>
+    </nav>
+
+    <!-- ======================================== -->
+    <!-- 日本語版 -->
+    <!-- ======================================== -->
+    <section id="ja">
+
+        <div class="highlight-box">
+            <span class="icon">&#x2705;</span>
+            <p>本アプリは氏名・メールアドレス等の個人情報を一切収集しません。</p>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>保存するデータ</h3>
+                <p>予算・支出・カテゴリ・設定情報のみをお客様のデバイス内に保存します。開発者を含む第三者がアクセスする手段はありません。外部サーバーへの送信は一切行いません。</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>ウィジェット</h3>
+                <p>ホーム画面ウィジェットへのデータ表示にApp Group（デバイス内共有）を使用します。外部送信はありません。</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>Apple・課金情報</h3>
+                <p>App Store経由の課金情報はApple Inc.が管理します。開発者は決済情報に一切アクセスしません。</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>広告（無料プランのみ）</h3>
+                <p>将来的に広告SDKを導入する場合は事前にポリシーを更新し、改めてご同意をいただきます。</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>データの削除</h3>
+                <p>アプリをアンインストールすることで全データが完全に削除されます。</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>第三者提供</h3>
+                <p>お客様のデータを第三者に提供・販売・共有することは一切ありません。</p>
+            </div>
+        </div>
+
+    </section>
+
+    <hr class="divider">
+
+    <!-- ======================================== -->
+    <!-- English Version -->
+    <!-- ======================================== -->
+    <section id="en">
+
+        <div class="en-header">
+            <h2>Privacy Policy</h2>
+            <p>English Version</p>
+        </div>
+
+        <div class="highlight-box">
+            <span class="icon">&#x2705;</span>
+            <p>This app does not collect any personal information such as names or email addresses.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>Data Storage</h3>
+                <p>Only budget, expense, category, and settings data are stored locally on your device. No third party, including the developer, has any means to access this data. No data is ever transmitted to external servers.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>Widgets</h3>
+                <p>Home screen widgets use App Groups (on-device sharing) to display data. No data is sent externally.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>Apple &amp; Payment Information</h3>
+                <p>In-app purchase transactions made through the App Store are managed by Apple Inc. The developer does not have access to any payment information.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>Advertising (Free Plan Only)</h3>
+                <p>If an advertising SDK is introduced in the future, this policy will be updated in advance, and your consent will be requested again.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>Data Deletion</h3>
+                <p>All data is permanently deleted when you uninstall the app.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-card">
+                <h3>Third-Party Sharing</h3>
+                <p>Your data is never sold, shared, or provided to any third party.</p>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <p>Orbit Budget</p>
+        <p>Contact / お問い合わせ: <a href="https://github.com/arima0903" target="_blank" rel="noopener noreferrer">arima0903 (GitHub)</a></p>
+        <p>&copy; 2026 Orbit Budget. All rights reserved.</p>
+    </footer>
+
+</div>
+
+</body>
+</html>
