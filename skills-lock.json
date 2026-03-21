@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "accessibility-compliance": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "36d3b046163c42251732b3127c042f6b8eb7d91fcbf7ef9ae79fde79e9c99369"
+    },
+    "asc-xcode-build": {
+      "source": "rudrankriyam/app-store-connect-cli-skills",
+      "sourceType": "github",
+      "computedHash": "6276349e02529cb05129545a4a7ebc4673d06b7654d45cf6ee11ac87d0af674e"
+    },
+    "changelog-generator": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "ecac34a0da9e023cf6ae12d8f960615a0d5a5b3bffc23195c22147977f103d03"
+    },
+    "landing-page-copywriter": {
+      "source": "onewave-ai/claude-skills",
+      "sourceType": "github",
+      "computedHash": "f7c7ceb8d99be73eb3e84c6281f1cd56121342f36c94b1d5d2835e4273598ab1"
+    },
+    "swift-testing-expert": {
+      "source": "avdlee/swift-testing-agent-skill",
+      "sourceType": "github",
+      "computedHash": "ee2a73c7148264cb7e0a0819d3063225541e57162353d97707d9fab830d27ba6"
+    },
+    "xcodebuildmcp-cli": {
+      "source": "getsentry/xcodebuildmcp",
+      "sourceType": "github",
+      "computedHash": "4bdeb5d978bf410d4e99a7b89dda396e49ef457945633174f7f9ad0eff056cfb"
+    }
+  }
+}

@@ -1,4 +1,4 @@
-# No-Look-Budget デザインシステム
+# Orbit Budget デザインシステム
 
 ## コンセプト
 **「ADHD向け：開かなくてもわかる管理（No-Look Experience）」**

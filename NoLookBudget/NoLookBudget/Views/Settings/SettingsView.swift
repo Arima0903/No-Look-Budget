@@ -22,7 +22,7 @@ struct SettingsView: View {
                             Image(systemName: "crown.fill")
                                 .foregroundColor(.yellow)
                             VStack(alignment: .leading) {
-                                Text(isPremiumEnabled ? "Premium アクティブ" : "No-Look-Budget Premium")
+                                Text(isPremiumEnabled ? "Premium アクティブ" : "Orbit Budget Premium")
                                     .fontWeight(.bold)
                                     .foregroundColor(isPremiumEnabled ? .yellow : .white)
                                 Text("借金の分割・さらに高度な管理")
@@ -57,9 +57,18 @@ struct SettingsView: View {
 
                 // サポート・その他
                 Section(header: Text("その他").foregroundColor(.gray)) {
-                    NavigationLink("使い方・ウィジェットの置き方", destination: Text("Guide"))
-                    NavigationLink("プライバシーポリシー", destination: Text("Privacy"))
-                    NavigationLink("利用規約", destination: Text("Terms"))
+                    NavigationLink(destination: UsageGuideView()) {
+                        Label("使い方・ウィジェットの置き方", systemImage: "questionmark.circle")
+                            .foregroundColor(.white)
+                    }
+                    NavigationLink(destination: PrivacyPolicyView()) {
+                        Label("プライバシーポリシー", systemImage: "lock.shield")
+                            .foregroundColor(.white)
+                    }
+                    NavigationLink(destination: TermsOfServiceView()) {
+                        Label("利用規約", systemImage: "doc.text")
+                            .foregroundColor(.white)
+                    }
                 }
                 .listRowBackground(Color.white.opacity(0.05))
 
@@ -68,7 +77,7 @@ struct SettingsView: View {
                     HStack {
                         Spacer()
                         VStack(spacing: 5) {
-                            Text("No-Look-Budget")
+                            Text("Orbit Budget")
                                 .font(.footnote.bold())
                                 .foregroundColor(.gray)
                             Text("Version 1.0.0")

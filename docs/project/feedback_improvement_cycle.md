@@ -1,4 +1,4 @@
-# No-Look-Budget リリース後の機能改善サイクル設計
+# Orbit Budget リリース後の機能改善サイクル設計
 
 > バージョン: 1.0
 > 作成日: 2026-03-17
@@ -55,7 +55,7 @@ func requestReviewIfEligible() {
 
 **フィードバックフォーム（メール起動）の内容**
 ```
-件名: [No-Look-Budget フィードバック]
+件名: [Orbit Budget フィードバック]
 本文テンプレート:
 - 気になった点・困ったこと:
 - あったら嬉しい機能:
@@ -71,9 +71,9 @@ func requestReviewIfEligible() {
 
 **監視キーワード（X・TikTok・Instagram）**
 ```
-"No-Look-Budget"
-"NoLookBudget"
-"#NoLookBudget"
+"Orbit Budget"
+"OrbitBudget"
+"#OrbitBudget"
 "開かない家計簿"
 ```
 

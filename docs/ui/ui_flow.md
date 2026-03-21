@@ -1,4 +1,4 @@
-# No-Look-Budget: UI Flow (画面遷移図)
+# Orbit Budget: UI Flow (画面遷移図)
 
 アプリの画面遷移と主要なユーザー導線の設計です。MVP（初期リリース）における画面構成を表現しています。
 
@@ -13,7 +13,7 @@ graph TD
     HomeScreenWidget[ホーム画面ウィジェット<br>NoLookBudgetWidget]:::widget
     
     %% Core App
-    subgraph App [No-Look-Budget App]
+    subgraph App [Orbit Budget App]
         Dashboard[メインダッシュボード<br>DashboardView]:::main
         InputModal[1タップ入力モーダル 兼 電卓<br>QuickInputModalView]:::modal
         

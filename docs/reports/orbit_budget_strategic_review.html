@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbit Budget Strategic Review</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --navy: #080B14;
+  --navy-light: #1A1A2E;
+  --green: #4ADE80;
+  --green-dark: #22C55E;
+  --red: #EF4444;
+  --orange: #FB923C;
+  --blue: #60A5FA;
+  --purple: #A855F7;
+  --white: #FFFFFF;
+  --gray: #9CA3AF;
+  --dark-gray: #374151;
+}
+body { background: var(--navy); color: var(--white); font-family: 'Helvetica Neue', Arial, sans-serif; }
+.slide {
+  width: 1280px; min-height: 720px; margin: 0 auto 40px;
+  background: var(--navy); padding: 50px 60px;
+  border: 1px solid #1f2937; page-break-after: always;
+  position: relative; overflow: hidden;
+}
+h1 { font-size: 32px; margin-bottom: 8px; }
+h2 { font-size: 22px; margin-bottom: 16px; }
+h3 { font-size: 16px; margin-bottom: 8px; }
+.divider { height: 3px; background: var(--green); margin-bottom: 24px; }
+.subtitle { color: var(--gray); font-size: 14px; margin-bottom: 20px; }
+.card {
+  background: var(--navy-light); border: 1px solid #282840;
+  border-radius: 12px; padding: 20px; margin-bottom: 16px;
+}
+.card-title { font-weight: bold; font-size: 15px; margin-bottom: 10px; }
+.card-body { font-size: 13px; color: var(--gray); line-height: 1.7; }
+.card-body strong { color: var(--white); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+.tag-green { background: rgba(74,222,128,0.15); color: var(--green); }
+.tag-red { background: rgba(239,68,68,0.15); color: var(--red); }
+.tag-orange { background: rgba(251,146,60,0.15); color: var(--orange); }
+.tag-blue { background: rgba(96,165,250,0.15); color: var(--blue); }
+.rating { font-size: 22px; font-weight: 900; text-align: center; }
+.rating-label { font-size: 10px; text-align: center; display: block; margin-top: 2px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 10px 12px; border-bottom: 2px solid #282840; color: var(--gray); font-size: 12px; }
+td { padding: 10px 12px; border-bottom: 1px solid #1f2937; }
+.flow-arrow { color: var(--gray); font-size: 24px; display: flex; align-items: center; justify-content: center; }
+.flow-box { background: var(--navy-light); border-radius: 8px; padding: 12px 16px; text-align: center; font-size: 12px; font-weight: bold; }
+.highlight { border-left: 3px solid; padding-left: 16px; margin: 12px 0; }
+.num-circle { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; color: var(--navy); margin-right: 10px; }
+.center { text-align: center; }
+.mt { margin-top: 20px; }
+.mb { margin-bottom: 16px; }
+@media print { .slide { page-break-after: always; border: none; margin: 0; } body { background: var(--navy); } }
+/* 教育用コンポーネント */
+.framework-badge {
+  display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 11px;
+  font-weight: bold; background: rgba(168,85,247,0.15); color: var(--purple);
+  margin-right: 8px; margin-bottom: 6px;
+}
+.thinking-box {
+  background: rgba(96,165,250,0.06); border: 1px solid rgba(96,165,250,0.2);
+  border-radius: 12px; padding: 16px 20px; margin-top: 16px; font-size: 12px;
+  color: var(--gray); line-height: 1.8;
+}
+.thinking-box .label {
+  color: var(--blue); font-weight: bold; font-size: 11px;
+  letter-spacing: 2px; margin-bottom: 6px; display: block;
+}
+.ref-box {
+  background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.2);
+  border-radius: 12px; padding: 16px 20px; margin-top: 12px; font-size: 11px;
+  color: var(--gray); line-height: 1.8;
+}
+.ref-box .label {
+  color: var(--purple); font-weight: bold; font-size: 11px;
+  letter-spacing: 2px; margin-bottom: 6px; display: block;
+}
+.glossary {
+  background: rgba(74,222,128,0.06); border: 1px solid rgba(74,222,128,0.15);
+  border-radius: 12px; padding: 14px 20px; margin-top: 12px; font-size: 11px;
+  color: var(--gray); line-height: 1.8;
+}
+.glossary .label {
+  color: var(--green); font-weight: bold; font-size: 11px;
+  letter-spacing: 2px; margin-bottom: 6px; display: block;
+}
+.glossary dt { color: var(--white); font-weight: bold; display: inline; }
+.glossary dd { display: inline; margin-left: 0; }
+.glossary dd::after { content: ""; display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ===== SLIDE 1: TITLE ===== -->
+<div class="slide" style="display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+  <p style="color:var(--gray); font-size:14px; letter-spacing:4px; margin-bottom:40px;">STRATEGIC REVIEW</p>
+  <div style="background:rgba(15,18,30,0.8); padding:50px 80px; border-radius:20px; border:1px solid #282840;">
+    <h1 style="font-size:38px; margin-bottom:16px;">「浪費家の浪費を止める」は<br>実現できるのか？</h1>
+    <p style="color:var(--green); font-size:20px; margin-bottom:12px;">Orbit Budget のプロダクト戦略 再検証</p>
+    <p style="color:var(--gray); font-size:14px;">行動経済学 × ビジネス戦略 × ADHD当事者 の3視点による統合分析</p>
+  </div>
+  <div style="margin-top:30px; max-width:700px;">
+    <p style="color:var(--blue); font-size:12px; text-align:center; line-height:1.8;">
+      本資料は、プロダクト戦略の分析と同時に、<br>
+      <strong style="color:var(--white);">コンサルタントが「どのフレームワークで」「なぜその切り口で」考えたのか</strong>を学ぶ教材でもあります。<br>
+      各スライドの下部に <span class="framework-badge" style="margin:0;">使用フレームワーク</span>
+      <span style="color:var(--blue);">思考プロセス</span>
+      <span style="color:var(--purple);">出典・参考文献</span>
+      <span style="color:var(--green);">用語解説</span> を記載しています。
+    </p>
+  </div>
+  <p style="color:var(--dark-gray); font-size:12px; position:absolute; bottom:40px;">2026.03.19 | Confidential</p>
+</div>
+
+<!-- ===== SLIDE 2: EXECUTIVE SUMMARY ===== -->
+<div class="slide">
+  <h1>EXECUTIVE SUMMARY</h1>
+  <div class="divider"></div>
+  <p style="color:var(--orange); font-weight:bold; font-size:16px; margin-bottom:24px;">
+    結論: Orbit Budget は「記録を楽にするアプリ」であり、まだ「浪費を止めるアプリ」にはなっていない
+  </p>
+  <div class="grid3">
+    <div class="card" style="border-color:var(--green);">
+      <div class="card-title" style="color:var(--green);">✓ 強み（Keep）</div>
+      <div class="card-body">
+        <strong>• No-Look Experience は唯一無二</strong><br>
+        <strong>• ウィジェット＝「支払いの痛み」の再注入</strong><br>
+        <strong>• 立替分離＝管理崩壊の防止</strong><br>
+        <strong>• 3秒入力＝行動コストの極限削減</strong><br>
+        <strong>• 情報フィードバック欠如の完全カバー</strong>
+      </div>
+    </div>
+    <div class="card" style="border-color:var(--red);">
+      <div class="card-title" style="color:var(--red);">△ 課題（Problem）</div>
+      <div class="card-body">
+        <strong>• 購入「前」の介入メカニズムがない</strong><br>
+        <strong>• 日割り予算の概念がない</strong><br>
+        <strong>• 通知・リマインダーがない</strong><br>
+        <strong>• 入力忘れ→データ信頼性崩壊リスク</strong><br>
+        <strong>• プロダクト成功＝ユーザー離脱の矛盾</strong>
+      </div>
+    </div>
+    <div class="card" style="border-color:var(--blue);">
+      <div class="card-title" style="color:var(--blue);">→ 提言（Action）</div>
+      <div class="card-body">
+        <strong>• ①「今日使える金額」の導入（工数: S）</strong><br>
+        <strong>• ② 購入前チェックモード（工数: M）</strong><br>
+        <strong>• ③ 記録リマインダー通知（工数: S）</strong><br><br>
+        <strong style="color:var(--blue);">上記3つで「記録型→介入型」へ転換</strong>
+      </div>
+    </div>
+  </div>
+  <div class="card mt" style="border-color:var(--dark-gray);">
+    <div class="card-body">
+      現在の Orbit Budget は浪費の <strong>16原因のうち約半数に有効</strong>。特に「情報フィードバックの欠如」は<strong>全原因をカバー</strong>。
+      残り半数（衝動性の抑制・購入前介入）を<strong>小工数の3機能で補完</strong>すれば、「浪費を本当に止めるアプリ」として競合と圧倒的な差別化が可能。
+    </div>
+  </div>
+  <div class="thinking-box">
+    <span class="label">CONSULTANT'S NOTE: なぜこの構成なのか</span>
+    コンサル資料のExSumは「<strong style="color:var(--white);">結論 → 根拠 → 提言</strong>」の順番で書く。読み手（経営者）は忙しいので、1枚目で全体像を把握できなければ先を読まない。<br>
+    ここでは「<strong style="color:var(--white);">Keep（強み） / Problem（課題） / Action（提言）</strong>」の3カラムで整理している。これはコンサル業界で「KPT」や「空・雨・傘」と呼ばれるフレームワークの変形。<br>
+    <strong style="color:var(--white);">空（事実）</strong>= 現状こうなっている / <strong style="color:var(--white);">雨（解釈）</strong>= だからこの問題がある / <strong style="color:var(--white);">傘（行動）</strong>= だからこうすべき — という論理構造を1枚に凝縮する。
+  </div>
+  <div class="glossary">
+    <span class="label">GLOSSARY: 用語解説</span>
+    <dl>
+      <dt>ExSum（エグゼクティブサマリー）:</dt><dd>経営層向けの要約。資料全体を1〜2枚に凝縮したもの。「これだけ読めば意思決定できる」レベルにまとめる</dd>
+      <dt>工数 S / M / L:</dt><dd>Tシャツサイズ見積もり。S=1〜2日, M=3〜5日, L=1〜2週間が目安。正確な見積もりより「感覚的な規模感」を伝えるために使う</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ===== SLIDE 3: MECE ANALYSIS ===== -->
+<div class="slide">
+  <h1>浪費の根本原因ツリー（MECE分解）</h1>
+  <div class="divider"></div>
+  <p class="subtitle">なぜ人は浪費するのか？ — 4軸 × 16原因に分解し、Orbit Budget の守備範囲を特定</p>
+  <div class="grid4">
+    <div>
+      <div class="card-title" style="color:var(--blue); border-bottom:2px solid var(--blue); padding-bottom:6px;">A. 認知バイアス</div>
+      <table>
+        <tr><td>A-1 現在バイアス</td><td class="rating" style="color:var(--green);">○</td></tr>
+        <tr><td>A-2 メンタルアカウンティング</td><td class="rating" style="color:var(--green);">○</td></tr>
+        <tr><td>A-3 アンカリング効果</td><td class="rating" style="color:var(--red);">×</td></tr>
+        <tr><td>A-4 楽観性バイアス</td><td class="rating" style="color:var(--green);">○</td></tr>
+        <tr><td style="font-weight:bold;">A-5 支払いの痛みの鈍麻</td><td class="rating" style="color:var(--green);">◎</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="card-title" style="color:var(--orange); border-bottom:2px solid var(--orange); padding-bottom:6px;">B. 自己制御の失敗</div>
+      <table>
+        <tr><td>B-1 意志力の枯渇</td><td class="rating" style="color:var(--orange);">△</td></tr>
+        <tr><td>B-2 衝動性（ADHD）</td><td class="rating" style="color:var(--green);">○</td></tr>
+        <tr><td>B-3 社会的圧力</td><td class="rating" style="color:var(--orange);">△</td></tr>
+        <tr><td>B-4 習慣化された浪費</td><td class="rating" style="color:var(--green);">○</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="card-title" style="color:var(--green); border-bottom:2px solid var(--green); padding-bottom:6px;">C. 情報の欠如</div>
+      <table>
+        <tr><td style="font-weight:bold;">C-1 支出の不可視性</td><td class="rating" style="color:var(--green);">◎</td></tr>
+        <tr><td style="font-weight:bold;">C-2 記録の挫折</td><td class="rating" style="color:var(--green);">◎</td></tr>
+        <tr><td style="font-weight:bold;">C-3 予算の不在</td><td class="rating" style="color:var(--green);">◎</td></tr>
+        <tr><td style="font-weight:bold;">C-4 立替による管理崩壊</td><td class="rating" style="color:var(--green);">◎</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="card-title" style="color:var(--red); border-bottom:2px solid var(--red); padding-bottom:6px;">D. 環境・構造要因</div>
+      <table>
+        <tr><td>D-1 ダークパターン</td><td class="rating" style="color:var(--red);">×</td></tr>
+        <tr><td>D-2 サブスク累積</td><td class="rating" style="color:var(--orange);">△</td></tr>
+        <tr><td style="font-weight:bold;">D-3 収支の時間的分離</td><td class="rating" style="color:var(--green);">◎</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="mt" style="font-size:12px; color:var(--gray); line-height:1.8;">
+    <strong>凡例:</strong> ◎ = 有効（解決できる） / ○ = 部分的に有効 / △ = 効果薄い / × = 対応できていない<br>
+    <strong style="color:var(--green);">Orbit Budget は C（情報の欠如）を完全カバー。A-5（支払いの痛みの再注入）が最大の武器。</strong>
+  </div>
+  <div class="thinking-box">
+    <span class="label">CONSULTANT'S NOTE: この4軸はどこから来たのか</span>
+    「なぜ浪費するか」をいきなり列挙すると漏れが出る。コンサルは必ず<strong style="color:var(--white);">MECE（ミーシー）</strong>に分解してから個別原因を洗い出す。<br><br>
+    この4軸の切り方は<strong style="color:var(--white);">「個人の内面 vs 外部環境」×「認知（考え方）vs 行動（やり方）」</strong>の2×2マトリクスが元になっている:<br>
+    <strong style="color:var(--white);">A. 認知バイアス</strong> = 内面 × 認知（判断が歪んでいる）<br>
+    <strong style="color:var(--white);">B. 自己制御の失敗</strong> = 内面 × 行動（分かっていてもできない）<br>
+    <strong style="color:var(--white);">C. 情報の欠如</strong> = 外部 × 認知（そもそも情報が届いていない）<br>
+    <strong style="color:var(--white);">D. 環境・構造要因</strong> = 外部 × 行動（外部の仕組みが浪費を誘発する）<br><br>
+    この「2×2で軸を作り、その中を具体的に列挙する」のがMECE分解の基本テクニック。<br>
+    各原因（A-1〜D-3）は行動経済学の確立された概念から引いている（出典は下記参照）。
+  </div>
+  <div class="ref-box">
+    <span class="label">REFERENCE: 出典・参考文献</span>
+    <strong style="color:var(--white);">A-1 現在バイアス / 双曲割引:</strong> Laibson, D. (1997). "Golden Eggs and Hyperbolic Discounting." <em>Quarterly Journal of Economics</em>, 112(2).<br>
+    <strong style="color:var(--white);">A-2 メンタルアカウンティング:</strong> Thaler, R. (1999). "Mental Accounting Matters." <em>Journal of Behavioral Decision Making</em>, 12(3).<br>
+    <strong style="color:var(--white);">A-3 アンカリング効果:</strong> Tversky, A. & Kahneman, D. (1974). "Judgment under Uncertainty: Heuristics and Biases." <em>Science</em>, 185(4157).<br>
+    <strong style="color:var(--white);">A-5 支払いの痛み:</strong> Prelec, D. & Loewenstein, G. (1998). "The Red and the Black: Mental Accounting of Savings and Debt." <em>Marketing Science</em>, 17(1).<br>
+    <strong style="color:var(--white);">B-1 自我消耗:</strong> Baumeister, R. et al. (1998). "Ego Depletion." <em>Journal of Personality and Social Psychology</em>, 74(5). ※近年の再現性議論あり<br>
+    <strong style="color:var(--white);">MECE:</strong> Minto, B. (1987). <em>The Pyramid Principle</em>. マッキンゼー社のコミュニケーション手法として標準化
+  </div>
+  <div class="glossary">
+    <span class="label">GLOSSARY: 用語解説</span>
+    <dl>
+      <dt>MECE（ミーシー）:</dt><dd>Mutually Exclusive, Collectively Exhaustive の略。「漏れなく・ダブりなく」分解すること。コンサルの最も基本的な思考技法</dd>
+      <dt>現在バイアス:</dt><dd>将来の利益より目の前の利益を過大評価する心理傾向。「来月節約する」と思いつつ今月使い込むのはこれが原因</dd>
+      <dt>メンタルアカウンティング:</dt><dd>お金を心の中で「食費」「娯楽」のように色分けして管理する傾向。合理的に考えればお金に色はないが、人間は直感的に区別する</dd>
+      <dt>アンカリング:</dt><dd>最初に提示された数字に判断が引きずられる現象。「定価1万円が5,000円」と見ると、5,000円の価値ではなく「5,000円得した」と感じる</dd>
+      <dt>認知バイアス:</dt><dd>人間の脳が持つ「思考のクセ」の総称。判断を効率化するために進化したが、現代社会では非合理な意思決定を引き起こすことがある</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ===== SLIDE 4: COMPETITIVE COMPARISON ===== -->
+<div class="slide">
+  <h1>競合比較: 「記録型」 vs 「介入型」</h1>
+  <div class="divider"></div>
+  <p class="subtitle">BJ Fogg の行動モデル（B = MAT: 行動 = 動機 × 能力 × トリガー）による比較</p>
+  <div class="grid2">
+    <div class="card" style="border-color:var(--gray);">
+      <div class="card-title" style="color:var(--gray); font-size:18px;">マネーフォワード / Zaim（記録型）</div>
+      <div class="card-body" style="margin-bottom:16px;">
+        支出発生 → 自動記録 → 月末レポート → 反省 → <span style="color:var(--red);">翌月も同じ</span>
+      </div>
+      <table>
+        <tr><th style="color:var(--blue);">Motivation</th><td>正確に記録したい（外発的）</td></tr>
+        <tr><th style="color:var(--blue);">Ability</th><td>自動連携で楽。だが分析にスキル必要</td></tr>
+        <tr><th style="color:var(--blue);">Trigger</th><td>ユーザーが自発的に開く（<span style="color:var(--orange);">プル型</span>）</td></tr>
+      </table>
+      <p class="mt" style="font-weight:bold; text-align:center; font-size:15px; color:var(--gray);">
+        = 家計の「ダッシュボード」<br><span style="font-size:12px; font-weight:normal;">（見に行く人だけに役立つ）</span>
+      </p>
+    </div>
+    <div class="card" style="border-color:var(--green);">
+      <div class="card-title" style="color:var(--green); font-size:18px;">Orbit Budget（介入型）</div>
+      <div class="card-body" style="margin-bottom:16px;">
+        ロック画面を見る → 色が目に入る → 「やばい」→ <strong style="color:var(--green);">支出を止める</strong>
+      </div>
+      <table>
+        <tr><th style="color:var(--green);">Motivation</th><td><strong>赤いウィジェットを緑に戻したい（内発的）</strong></td></tr>
+        <tr><th style="color:var(--green);">Ability</th><td><strong>記録も閲覧も3秒。認知負荷ゼロ</strong></td></tr>
+        <tr><th style="color:var(--green);">Trigger</th><td><strong>ロック画面で自動発火（<span style="color:var(--green);">プッシュ型</span>）</strong></td></tr>
+      </table>
+      <p class="mt" style="font-weight:bold; text-align:center; font-size:15px; color:var(--green);">
+        = 家計の「警報装置」<br><span style="font-size:12px; font-weight:normal; color:var(--white);">（見なくても鳴る）</span>
+      </p>
+    </div>
+  </div>
+  <div class="card mt" style="border-color:var(--dark-gray);">
+    <div class="card-body">
+      <strong style="color:var(--green);">Orbit Budget の本質的な価値 = 「デジタル時代の支払いの痛みの再注入」</strong><br>
+      キャッシュレス社会で消えた「財布の中身が減る感覚」を、ウィジェットの色変化で疑似的に復元する。<br>
+      ただし、警告には<strong style="color:var(--orange);">順応効果</strong>がある（赤色にも慣れる）→ チャレンジ機能・日割り予算の変動表示で「慣れ」を防ぐ設計が必要
+    </div>
+  </div>
+  <div class="thinking-box">
+    <span class="label">CONSULTANT'S NOTE: なぜこの比較軸なのか</span>
+    競合比較は「機能表」で並べがちだが、それでは<strong style="color:var(--white);">本質的な差異</strong>が見えない。<br>
+    ここでは BJ Fogg の行動モデル（B = MAT）を<strong style="color:var(--white);">比較の「物差し」</strong>として使っている。<br><br>
+    <strong style="color:var(--white);">なぜBJ Foggか？</strong> このアプリのゴールは「浪費を止める」= 「行動を変える」こと。<br>
+    行動変容を扱うフレームワークで比較することで、「機能の違い」ではなく「<strong style="color:var(--white);">行動を変える力の違い</strong>」が浮かび上がる。<br>
+    コンサルの比較は常に<strong style="color:var(--white);">「目的に最も関連する軸」</strong>で行うのが鉄則。
+  </div>
+  <div class="ref-box">
+    <span class="label">REFERENCE: 出典・参考文献</span>
+    <strong style="color:var(--white);">BJ Fogg 行動モデル:</strong> Fogg, BJ (2009). "A Behavior Model for Persuasive Design." <em>Persuasive Technology, 4th International Conference</em>. スタンフォード大学 Persuasive Technology Lab 所長が提唱<br>
+    <strong style="color:var(--white);">Nudge（ナッジ理論）:</strong> Thaler, R. & Sunstein, C. (2008). <em>Nudge: Improving Decisions about Health, Wealth, and Happiness</em>. Thaler は2017年ノーベル経済学賞を受賞<br>
+    <strong style="color:var(--white);">EAST フレームワーク:</strong> Behavioural Insights Team (2014). <em>EAST: Four Simple Ways to Apply Behavioural Insights</em>. 英国政府の行動科学チームが策定した実務ガイド
+  </div>
+  <div class="glossary">
+    <span class="label">GLOSSARY: 用語解説</span>
+    <dl>
+      <dt>BJ Fogg 行動モデル（B=MAT）:</dt><dd>「行動 = 動機 × 能力 × トリガー」。3つ全てが揃った瞬間に行動が起きるという理論。1つでも欠ければ行動は起きない</dd>
+      <dt>プッシュ型 / プル型:</dt><dd>プッシュ = 自分から取りに行かなくても情報が届く。プル = 自分でアプリを開いて見に行く。通知やウィジェットはプッシュ型</dd>
+      <dt>順応効果:</dt><dd>刺激に対して反応が鈍くなる現象。最初は赤いウィジェットに驚くが、毎日見ていると「またか」と無視するようになる</dd>
+      <dt>ナッジ:</dt><dd>強制や罰則ではなく、選択肢の「見せ方」や「並べ方」を工夫して、人の行動を望ましい方向に導く手法</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ===== SLIDE 5: ADHD EVALUATION ===== -->
+<div class="slide">
+  <h1>ADHD当事者視点: 本当にこのアプリで浪費は止まるか？</h1>
+  <div class="divider"></div>
+  <div class="grid4 mb">
+    <div class="card" style="border-color:var(--orange);">
+      <div class="card-title" style="color:var(--orange);">衝動性</div>
+      <div class="card-body">「欲しい」→ 即購入。<br>ブレーキが効かない</div>
+    </div>
+    <div class="card" style="border-color:var(--blue);">
+      <div class="card-title" style="color:var(--blue);">実行機能障害</div>
+      <div class="card-body">「管理しよう」→ 行動に<br>落とし込めない</div>
+    </div>
+    <div class="card" style="border-color:var(--red);">
+      <div class="card-title" style="color:var(--red);">時間感覚の歪み</div>
+      <div class="card-body">月末まであとX日が<br>認識できない</div>
+    </div>
+    <div class="card" style="border-color:var(--purple);">
+      <div class="card-title" style="color:var(--purple);">報酬系の問題</div>
+      <div class="card-body">買い物＝手軽な<br>ドーパミン供給源</div>
+    </div>
+  </div>
+  <h2>各機能の ADHD 適合度評価</h2>
+  <div class="grid3">
+    <div class="card"><div class="grid2"><div><div class="card-title">ウィジェット常時表示</div><div class="card-body">正しいが「見る」だけでは<br>行動は変わらない</div></div><div class="center"><span class="rating" style="color:var(--green); font-size:32px;">○</span><span class="rating-label" style="color:var(--green);">部分有効</span></div></div></div>
+    <div class="card"><div class="grid2"><div><div class="card-title">3秒入力</div><div class="card-body">最大の武器。ただし<br>入力自体を忘れる問題</div></div><div class="center"><span class="rating" style="color:var(--green); font-size:32px;">◎</span><span class="rating-label" style="color:var(--green);">有効</span></div></div></div>
+    <div class="card"><div class="grid2"><div><div class="card-title">予算ゲージ</div><div class="card-body">色変化は直感的だが<br>情報量が多すぎる</div></div><div class="center"><span class="rating" style="color:var(--green); font-size:32px;">○</span><span class="rating-label" style="color:var(--green);">部分有効</span></div></div></div>
+    <div class="card"><div class="grid2"><div><div class="card-title">立替分離</div><div class="card-body">認知負荷の分離が<br>完璧に機能</div></div><div class="center"><span class="rating" style="color:var(--green); font-size:32px;">◎</span><span class="rating-label" style="color:var(--green);">有効</span></div></div></div>
+    <div class="card"><div class="grid2"><div><div class="card-title">チュートリアル</div><div class="card-body">ADHDの人は<br>スキップする</div></div><div class="center"><span class="rating" style="color:var(--orange); font-size:32px;">△</span><span class="rating-label" style="color:var(--orange);">効果薄</span></div></div></div>
+    <div class="card" style="border-color:var(--red);"><div class="grid2"><div><div class="card-title" style="color:var(--red);">通知・リマインダー</div><div class="card-body"><strong style="color:var(--red);">未実装</strong><br>これが致命的</div></div><div class="center"><span class="rating" style="color:var(--red); font-size:32px;">×</span><span class="rating-label" style="color:var(--red);">未対応</span></div></div></div>
+  </div>
+  <div class="highlight mt" style="border-color:var(--orange);">
+    <p style="color:var(--orange); font-weight:bold;">致命的な欠如: ① 購入「前」の介入がない ② 日割り予算がない ③ プッシュ通知がない</p>
+    <p style="color:var(--gray); font-size:13px;">→ 現在は「記録を楽にするアプリ」。「浪費を止めるアプリ」になるには上記3つが不可欠</p>
+  </div>
+  <div class="thinking-box">
+    <span class="label">CONSULTANT'S NOTE: 「当事者視点」をなぜ入れるのか</span>
+    コンサルは数字とロジックで分析するが、<strong style="color:var(--white);">ユーザーの「本音」は論理だけでは見えない</strong>。<br>
+    特にADHDのような神経発達特性は、定型発達者が「想像で」分析しても的を外す。<br>
+    そこで「当事者の声」を1つの独立した分析視点として入れている。<br><br>
+    これはコンサル業界では<strong style="color:var(--white);">「エスノグラフィー（民族誌学的調査）」</strong>と呼ばれる手法の簡易版。<br>
+    IDEOやデザインコンサルが「ユーザーの家に行って生活を観察する」のと同じ発想で、<br>
+    <strong style="color:var(--white);">机上の分析では得られないインサイト</strong>（例:「ADHDの人はチュートリアルをスキップする」）を引き出している。
+  </div>
+  <div class="ref-box">
+    <span class="label">REFERENCE: 出典・参考文献</span>
+    <strong style="color:var(--white);">ADHDと衝動性:</strong> Barkley, R.A. (2015). <em>Attention-Deficit Hyperactivity Disorder: A Handbook for Diagnosis and Treatment</em>. 4th ed. ADHD研究の世界的権威<br>
+    <strong style="color:var(--white);">Time Blindness:</strong> Barkley, R.A. (2012). <em>Executive Functions: What They Are, How They Work</em>. ADHDの時間感覚の歪みを「Time Blindness」と命名<br>
+    <strong style="color:var(--white);">ドーパミン仮説:</strong> Volkow, N.D. et al. (2009). "Evaluating Dopamine Reward Pathway in ADHD." <em>JAMA</em>, 302(10).<br>
+    <strong style="color:var(--white);">エスノグラフィー:</strong> IDEO (2015). <em>The Field Guide to Human-Centered Design</em>. デザイン思考における当事者調査の標準手法
+  </div>
+  <div class="glossary">
+    <span class="label">GLOSSARY: 用語解説</span>
+    <dl>
+      <dt>ADHD:</dt><dd>注意欠如・多動症。脳の実行機能（計画・優先順位・衝動制御）に特性がある神経発達症。成人の3〜5%に存在するとされる</dd>
+      <dt>実行機能障害:</dt><dd>計画を立てる・優先順位をつける・開始する・完了するといった「脳の司令塔」機能の困難。ADHDの中核的な特性</dd>
+      <dt>Time Blindness:</dt><dd>時間の経過を直感的に把握できない特性。「あと30分」「月末まであと10日」が体感として認識できない</dd>
+      <dt>エスノグラフィー:</dt><dd>文化人類学の手法を応用し、ユーザーの実際の生活や行動を観察してインサイトを得る調査方法</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ===== SLIDE 6: 3 PROPOSALS ===== -->
+<div class="slide">
+  <h1>「記録型」→「介入型」への転換: 3つの改善提案</h1>
+  <div class="divider"></div>
+  <div class="grid3">
+    <div class="card" style="border-color:var(--green); min-height:480px;">
+      <div style="display:flex; align-items:center; margin-bottom:16px;">
+        <span class="num-circle" style="background:var(--green);">1</span>
+        <span style="font-size:18px; font-weight:bold;">「今日使える金額」の導入</span>
+      </div>
+      <h3 style="color:var(--green);">What:</h3>
+      <p class="card-body mb">月の残り予算 ÷ 残り日数 = 今日の予算<br>ウィジェット・ダッシュボードの最上位に表示</p>
+      <h3 style="color:var(--green);">Why:</h3>
+      <p class="card-body mb">Time Blindness（時間感覚の歪み）への直接対策。<br>「残り82,000円」より「<strong>今日は2,700円まで</strong>」の方が行動を変える力が圧倒的に強い。金額が小さくなることで危機感が具体化。</p>
+      <h3 style="color:var(--green);">工数:</h3>
+      <p style="font-size:18px; font-weight:bold; color:var(--green);">S（計算ロジック + 表示変更のみ）</p>
+    </div>
+    <div class="card" style="border-color:var(--orange); min-height:480px;">
+      <div style="display:flex; align-items:center; margin-bottom:16px;">
+        <span class="num-circle" style="background:var(--orange);">2</span>
+        <span style="font-size:18px; font-weight:bold;">「購入前チェック」モード</span>
+      </div>
+      <h3 style="color:var(--orange);">What:</h3>
+      <p class="card-body mb">Quick Input に「これから使う」モードを追加。<br>金額入力 → 残額シミュレーション → 確認 → 記録</p>
+      <h3 style="color:var(--orange);">Why:</h3>
+      <p class="card-body mb">衝動性に対する唯一の有効な対策は「<strong>意思決定と実行の間に物理的な間を作る</strong>」こと。この1ステップが最後のブレーキになる。</p>
+      <h3 style="color:var(--orange);">工数:</h3>
+      <p style="font-size:18px; font-weight:bold; color:var(--orange);">M（新モード UI + フロー追加）</p>
+    </div>
+    <div class="card" style="border-color:var(--blue); min-height:480px;">
+      <div style="display:flex; align-items:center; margin-bottom:16px;">
+        <span class="num-circle" style="background:var(--blue);">3</span>
+        <span style="font-size:18px; font-weight:bold;">記録忘れ防止リマインダー</span>
+      </div>
+      <h3 style="color:var(--blue);">What:</h3>
+      <p class="card-body mb">毎日21時にローカル通知。<br>未記録日は「今日は支出ゼロ？すごい！」とポジティブに</p>
+      <h3 style="color:var(--blue);">Why:</h3>
+      <p class="card-body mb">ADHDが家計簿を3日で放棄する最大の原因は「<strong>空白期間ができてやる気を失う</strong>」こと。叱責ではなくポジティブな文言で習慣の外部足場を提供。</p>
+      <h3 style="color:var(--blue);">工数:</h3>
+      <p style="font-size:18px; font-weight:bold; color:var(--blue);">S（ローカル通知のみ）</p>
+    </div>
+  </div>
+  <div class="highlight mt" style="border-color:var(--green);">
+    <p style="color:var(--green); font-weight:bold;">3つとも現在のアーキテクチャに大きな変更なく追加可能。合計工数: 2〜3スプリント</p>
+  </div>
+  <div class="thinking-box">
+    <span class="label">CONSULTANT'S NOTE: 提案の「切り方」</span>
+    改善提案は「100個列挙する」のではなく<strong style="color:var(--white);">「3つに絞る」</strong>のがコンサルの鉄則。<br>
+    人間が一度に処理できる情報は3〜5個（ミラーの法則）。それ以上は読み飛ばされる。<br><br>
+    絞り方の基準は<strong style="color:var(--white);">「インパクト × 実現可能性」</strong>マトリクス:<br>
+    • インパクト大 × 実現容易 = <strong style="color:var(--green);">今すぐやる（Quick Win）</strong> → 提案①③がこれ<br>
+    • インパクト大 × 実現やや大変 = <strong style="color:var(--orange);">次にやる</strong> → 提案②がこれ<br>
+    • インパクト小 or 実現困難 = 捨てる<br><br>
+    また、各提案を<strong style="color:var(--white);">「What（何をする）→ Why（なぜやる）→ 工数（どれくらい）」</strong>で構造化するのはマッキンゼーの「SCQ（Situation-Complication-Question）」フォーマットの変形。
+  </div>
+  <div class="glossary">
+    <span class="label">GLOSSARY: 用語解説</span>
+    <dl>
+      <dt>Quick Win:</dt><dd>短期間・低コストで実現でき、かつインパクトが大きい施策のこと。プロジェクト初期に信頼を獲得するために重要</dd>
+      <dt>スプリント:</dt><dd>アジャイル開発における1〜2週間の開発サイクル。1スプリント = 約2週間の開発期間</dd>
+      <dt>クーリングオフ効果:</dt><dd>「即決」を避け、時間を置いてから判断させることで衝動的な意思決定を防ぐ効果</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ===== SLIDE 7: BUSINESS MODEL ===== -->
+<div class="slide">
+  <h1>ビジネスモデルの構造課題と対策</h1>
+  <div class="divider"></div>
+  <h2 style="color:var(--red);">構造的矛盾: プロダクトの成功 = ユーザーの離脱</h2>
+  <div style="display:flex; align-items:center; gap:8px; margin-bottom:24px;">
+    <div class="flow-box" style="border:1px solid var(--green); color:var(--green); flex:1;">浪費が止まる<br>（成功）</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border:1px solid var(--orange); color:var(--orange); flex:1;">赤字にならない</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border:1px solid var(--orange); color:var(--orange); flex:1;">警告が出ない</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border:1px solid var(--red); color:var(--red); flex:1;">課金動機が消える</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border:1px solid var(--red); color:var(--red); flex:1;">LTVが下がる</div>
+  </div>
+  <h2 style="color:var(--green);">対策: ゴールの拡張</h2>
+  <div class="grid2 mb">
+    <div class="card" style="border-color:var(--blue);">
+      <div class="card-title" style="color:var(--blue);">現在のゴール（Phase 1-2）</div>
+      <div class="card-body"><strong>「浪費を止める」</strong> = 予算内で生活する<br><br>→ 達成するとアプリが不要になる</div>
+    </div>
+    <div class="card" style="border-color:var(--green);">
+      <div class="card-title" style="color:var(--green);">拡張ゴール（Phase 3以降）</div>
+      <div class="card-body"><strong style="color:var(--white);">「お金と上手に付き合う」</strong> = 節約 → 貯蓄 → 投資<br><br>→ 浪費が止まった後も使い続ける理由がある</div>
+    </div>
+  </div>
+  <h2>市場規模と現実的な収益見通し</h2>
+  <div class="grid4">
+    <div class="card" style="border-color:var(--blue); text-align:center;">
+      <div class="card-title" style="color:var(--blue);">TAM</div>
+      <p style="font-size:24px; font-weight:900;">3,000万人</p>
+      <p class="card-body">家計簿アプリ市場</p>
+    </div>
+    <div class="card" style="border-color:var(--green); text-align:center;">
+      <div class="card-title" style="color:var(--green);">SAM</div>
+      <p style="font-size:24px; font-weight:900;">150〜250万人</p>
+      <p class="card-body">浪費家セグメント</p>
+    </div>
+    <div class="card" style="border-color:var(--orange); text-align:center;">
+      <div class="card-title" style="color:var(--orange);">SOM</div>
+      <p style="font-size:24px; font-weight:900;">1〜3万人</p>
+      <p class="card-body">初年度獲得目標</p>
+    </div>
+    <div class="card" style="border-color:var(--red); text-align:center;">
+      <div class="card-title" style="color:var(--red);">黒字化ライン</div>
+      <p style="font-size:24px; font-weight:900;">DAU 3,000</p>
+      <p class="card-body">広告 + サブスク</p>
+    </div>
+  </div>
+  <div class="thinking-box">
+    <span class="label">CONSULTANT'S NOTE: Issue Tree と TAM/SAM/SOM</span>
+    ビジネスの成立可否を検証するとき、コンサルは<strong style="color:var(--white);">Issue Tree（イシューツリー）</strong>で論点をMECEに分解する。<br>
+    ここでは「成功するか？」を4つの小問に分解: ①市場はあるか ②お金を払うか ③最適な手段か ④競争優位はあるか<br><br>
+    <strong style="color:var(--white);">TAM → SAM → SOM</strong> は市場規模を3段階で絞り込むフレームワーク。<br>
+    「市場は3,000万人！」と言うだけでは意味がなく、<strong style="color:var(--white);">現実的に獲得できる人数（SOM）</strong>まで落とし込んで初めて事業計画になる。<br><br>
+    「プロダクトの成功＝ユーザー離脱」の矛盾は、<strong style="color:var(--white);">ジレンマ分析</strong>と呼ばれる手法。<br>
+    「目的関数が矛盾していないか？」を最初に確認するのがコンサルの基本動作。
+  </div>
+  <div class="ref-box">
+    <span class="label">REFERENCE: 出典・参考文献</span>
+    <strong style="color:var(--white);">Issue Tree:</strong> Minto, B. (1987). <em>The Pyramid Principle</em>. 論理的な問題分解の標準手法<br>
+    <strong style="color:var(--white);">TAM/SAM/SOM:</strong> Blank, S. & Dorf, B. (2012). <em>The Startup Owner's Manual</em>. スタートアップの市場規模推定の標準フレームワーク<br>
+    <strong style="color:var(--white);">LTV（顧客生涯価値）:</strong> Gupta, S. et al. (2004). "Valuing Customers." <em>Journal of Marketing Research</em>, 41(1).<br>
+    <strong style="color:var(--white);">Moat（経済的堀）:</strong> Buffett, W. / Morningstar (2004). 競合が模倣困難な持続的競争優位を「堀」に例えた概念
+  </div>
+  <div class="glossary">
+    <span class="label">GLOSSARY: 用語解説</span>
+    <dl>
+      <dt>TAM:</dt><dd>Total Addressable Market。理論上の最大市場規模。「全員が使ったら」の数字</dd>
+      <dt>SAM:</dt><dd>Serviceable Available Market。自社のプロダクトが実際にリーチできる市場規模</dd>
+      <dt>SOM:</dt><dd>Serviceable Obtainable Market。現実的に獲得可能な市場規模。事業計画はこの数字で立てる</dd>
+      <dt>LTV:</dt><dd>Life Time Value（顧客生涯価値）。1人のユーザーが生涯で支払う総額。サブスク月480円 × 平均継続6ヶ月 = LTV 2,880円</dd>
+      <dt>Moat（モート）:</dt><dd>城の「堀」の意。競合が真似しにくい構造的な優位性のこと。ネットワーク効果・ブランド・技術特許などが典型例</dd>
+      <dt>WTP:</dt><dd>Willingness to Pay（支払い意欲）。「この問題を解決するためにいくらまで払うか」という消費者の心理的な支払い上限</dd>
+      <dt>PMF:</dt><dd>Product-Market Fit。プロダクトが市場のニーズに合致している状態。D30継続率40%以上が1つの目安と言われる</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ===== SLIDE 8: TARGET SEGMENTS ===== -->
+<div class="slide">
+  <h1>ターゲットセグメント: 誰を最初に攻めるか</h1>
+  <div class="divider"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>セグメント</th>
+        <th>優先度</th>
+        <th>年齢 / 手取り</th>
+        <th>浪費パターン</th>
+        <th>Orbit Budget の刺さるポイント</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-left:3px solid var(--green);">
+        <td><strong>B: 飲み会社畜型</strong></td>
+        <td><span class="tag tag-green">★★★ 最優先</span></td>
+        <td>25〜32歳 / 22〜35万</td>
+        <td>飲み会・外食・ガジェット</td>
+        <td><strong>立替セパレーターが直接刺さる。既存アプリへの不満が具体的</strong></td>
+      </tr>
+      <tr style="border-left:3px solid var(--green);">
+        <td><strong>E: ADHD当事者</strong></td>
+        <td><span class="tag tag-green">★★★ 最優先</span></td>
+        <td>全年齢 / 全帯域</td>
+        <td>衝動買い全般</td>
+        <td><strong>「ADHD向け」がそのまま刺さる。自助コミュニティで口コミ拡散</strong></td>
+      </tr>
+      <tr style="border-left:3px solid var(--orange);">
+        <td>A: 衝動買いSNS世代</td>
+        <td><span class="tag tag-orange">★★☆ 第2優先</span></td>
+        <td>20〜25歳 / 15〜22万</td>
+        <td>コスメ・カフェ・推し活</td>
+        <td>WTPが低い。推し活は「浪費」と認識していない</td>
+      </tr>
+      <tr style="border-left:3px solid var(--dark-gray);">
+        <td>C: 見栄消費カップル</td>
+        <td><span class="tag" style="background:#374151; color:var(--gray);">★☆☆ 第3優先</span></td>
+        <td>28〜35歳 / 25〜40万</td>
+        <td>デート・旅行・ブランド</td>
+        <td>個人アプリでは対応しにくい</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="highlight mt" style="border-color:var(--green);">
+    <p style="color:var(--green); font-weight:bold; font-size:15px;">
+      戦略: セグメントBとEの二刀流でPMFを検証 → D30継続率20%達成後にセグメントAへ拡大
+    </p>
+    <p style="color:var(--gray); font-size:13px; margin-top:4px;">
+      最大の競合は「何もしない」（学習性無力感）。「もう一度だけ試してみよう」と思わせるマーケティングメッセージが鍵
+    </p>
+  </div>
+  <div class="thinking-box">
+    <span class="label">CONSULTANT'S NOTE: セグメンテーションの考え方</span>
+    「浪費家」を一括りにすると戦略が曖昧になる。<strong style="color:var(--white);">STP分析</strong>でセグメントに分解し、最も刺さるターゲットを選ぶ。<br><br>
+    セグメントの<strong style="color:var(--white);">切り方（変数）</strong>がポイント。年齢・収入だけでなく<strong style="color:var(--white);">「浪費パターン」</strong>で切っているのは、<br>
+    同じ「浪費家」でも「飲み会で使う人」と「推し活で使う人」では<strong style="color:var(--white);">刺さるメッセージが全く違う</strong>から。<br><br>
+    優先セグメントの選定基準:<br>
+    ① <strong style="color:var(--white);">課題の深刻度</strong>（ペインが深いほど使ってもらえる）<br>
+    ② <strong style="color:var(--white);">自社プロダクトとの適合度</strong>（機能が直接刺さるか）<br>
+    ③ <strong style="color:var(--white);">到達可能性</strong>（マーケティングでリーチできるか）<br>
+    ④ <strong style="color:var(--white);">WTP</strong>（お金を払ってくれるか）<br><br>
+    「最大の競合は何もしない」— これは<strong style="color:var(--white);">ゼロサム思考からの脱却</strong>。既存アプリと戦うのではなく、「諦めた人」を掘り起こす。
+  </div>
+  <div class="ref-box">
+    <span class="label">REFERENCE: 出典・参考文献</span>
+    <strong style="color:var(--white);">STP分析:</strong> Kotler, P. (1967). <em>Marketing Management</em>. マーケティングの父によるセグメンテーション・ターゲティング・ポジショニングの基本理論<br>
+    <strong style="color:var(--white);">ジョブ理論:</strong> Christensen, C. (2016). <em>Competing Against Luck</em>. ユーザーが「雇う」のは製品ではなく「解決したいジョブ」であるという理論<br>
+    <strong style="color:var(--white);">学習性無力感:</strong> Seligman, M. (1972). "Learned Helplessness." 繰り返しの失敗体験により「何をしても無駄」と学習してしまう心理現象
+  </div>
+  <div class="glossary">
+    <span class="label">GLOSSARY: 用語解説</span>
+    <dl>
+      <dt>STP分析:</dt><dd>Segmentation（市場分割）→ Targeting（標的選定）→ Positioning（差別化の位置取り）。マーケティング戦略の基本フレームワーク</dd>
+      <dt>ペイン:</dt><dd>ユーザーが感じている「痛み」「困りごと」のこと。ペインが深いほどプロダクトへの需要が高い</dd>
+      <dt>D30継続率:</dt><dd>アプリをインストールして30日後にまだ使っている人の割合。一般的なアプリでは10〜15%が平均</dd>
+      <dt>学習性無力感:</dt><dd>何度も家計簿に挫折した結果、「自分にはお金の管理は無理」と諦めてしまっている心理状態</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ===== SLIDE 9: NEXT STEPS ===== -->
+<div class="slide">
+  <h1>NEXT STEPS: 今後のアクションプラン</h1>
+  <div class="divider"></div>
+  <div class="grid4">
+    <div class="card" style="border-color:var(--green); min-height:360px;">
+      <div style="font-size:28px; font-weight:900; color:var(--green); margin-bottom:8px;">NOW</div>
+      <div class="card-title">MVP リリース準備</div>
+      <div class="card-body">
+        • TestFlight 配布<br>
+        • ST 10件の実施<br>
+        • App Store 提出・審査<br><br>
+        <span style="color:var(--green);">現在のコードベースで実施</span>
+      </div>
+    </div>
+    <div class="card" style="border-color:var(--blue); min-height:360px;">
+      <div style="font-size:28px; font-weight:900; color:var(--blue); margin-bottom:8px;">v1.1</div>
+      <div class="card-title">「介入型」機能追加</div>
+      <div class="card-body">
+        • ①「今日使える金額」実装<br>
+        • ③ 記録リマインダー通知<br>
+        • ウィジェットに日割り予算表示<br><br>
+        <span style="color:var(--blue);">工数: 1スプリント</span>
+      </div>
+    </div>
+    <div class="card" style="border-color:var(--orange); min-height:360px;">
+      <div style="font-size:28px; font-weight:900; color:var(--orange); margin-bottom:8px;">v1.2</div>
+      <div class="card-title">行動変容の深化</div>
+      <div class="card-body">
+        • ② 購入前チェックモード<br>
+        • チャレンジ・ストリーク<br>
+        • 週間/月間レポート通知<br><br>
+        <span style="color:var(--orange);">工数: 2スプリント</span>
+      </div>
+    </div>
+    <div class="card" style="border-color:var(--purple); min-height:360px;">
+      <div style="font-size:28px; font-weight:900; color:var(--purple); margin-bottom:8px;">v2.0</div>
+      <div class="card-title">ゴールの拡張</div>
+      <div class="card-body">
+        • 「お金と上手に付き合う」へ<br>
+        • 貯蓄目標機能<br>
+        • AdMob + サブスク本格導入<br><br>
+        <span style="color:var(--purple);">PMF確認後に着手</span>
+      </div>
+    </div>
+  </div>
+  <div class="card mt" style="border-color:var(--green); text-align:center; padding:24px;">
+    <p style="font-size:20px; font-weight:bold; color:var(--green); margin-bottom:8px;">
+      最重要KPI: D30継続率 20% の達成
+    </p>
+    <p style="color:var(--gray); font-size:14px;">
+      マネタイズは PMF（Product-Market Fit）のシグナルが確認できてからでも遅くない
+    </p>
+  </div>
+  <div class="thinking-box">
+    <span class="label">CONSULTANT'S NOTE: ロードマップの作り方</span>
+    提言を「いつやるか」に落とし込むのがロードマップ。ここでは<strong style="color:var(--white);">時間軸 × 確実性</strong>で整理している。<br><br>
+    <strong style="color:var(--white);">「NOW」は確実にやること</strong>（MVPリリース。議論の余地なし）<br>
+    <strong style="color:var(--white);">「v1.1」は確度が高い提言</strong>（Quick Winで効果が見込める）<br>
+    <strong style="color:var(--white);">「v1.2」は仮説ベース</strong>（効果検証が必要）<br>
+    <strong style="color:var(--white);">「v2.0」はビジョン</strong>（PMF確認後に方針を決定）<br><br>
+    コンサルの提言は必ず<strong style="color:var(--white);">「次に何をすべきか」</strong>で終わる。<br>
+    分析だけして「あとはお任せします」は最悪のコンサル。<strong style="color:var(--white);">具体的なアクション + 優先順位 + 成功指標（KPI）</strong>をセットで提示する。
+  </div>
+  <div class="ref-box">
+    <span class="label">REFERENCE: この資料全体で使用したフレームワーク一覧</span>
+    <table style="font-size:11px; margin-top:8px;">
+      <tr><th>フレームワーク</th><th>使用スライド</th><th>出典</th><th>用途</th></tr>
+      <tr><td>MECE</td><td>スライド3</td><td>Minto, B. <em>The Pyramid Principle</em></td><td>原因の漏れなき分解</td></tr>
+      <tr><td>BJ Fogg 行動モデル</td><td>スライド4</td><td>Fogg, BJ (2009) Stanford大学</td><td>競合比較の「物差し」</td></tr>
+      <tr><td>EAST</td><td>スライド4</td><td>英国 Behavioural Insights Team</td><td>ナッジ設計の評価</td></tr>
+      <tr><td>Issue Tree</td><td>スライド7</td><td>Minto, B. <em>The Pyramid Principle</em></td><td>ビジネス成否の分解</td></tr>
+      <tr><td>TAM/SAM/SOM</td><td>スライド7</td><td>Blank, S. <em>Startup Owner's Manual</em></td><td>市場規模の推定</td></tr>
+      <tr><td>STP分析</td><td>スライド8</td><td>Kotler, P. <em>Marketing Management</em></td><td>ターゲット選定</td></tr>
+      <tr><td>空・雨・傘</td><td>スライド2</td><td>マッキンゼー社内研修</td><td>ExSumの論理構造</td></tr>
+      <tr><td>インパクト×実現可能性</td><td>スライド6</td><td>BCG / マッキンゼー共通</td><td>提案の優先順位付け</td></tr>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

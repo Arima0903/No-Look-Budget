@@ -1,4 +1,4 @@
-# No-Look-Budget IT（結合テスト）仕様書
+# Orbit Budget IT（結合テスト）仕様書
 
 | 項目 | 内容 |
 |------|------|

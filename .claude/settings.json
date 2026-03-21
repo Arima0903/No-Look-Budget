@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(swiftformat:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(git:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx:*)",
+      "Bash(npx skills:*)",
+      "Bash(identify /Users/taguchikoji/Desktop/vibecoding/second-business/No-Look-Budget/docs/design/assets/astronaut_app_icon.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/taguchikoji/Desktop/vibecoding/second-business/No-Look-Budget/docs/design/assets/astronaut_app_icon.png)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(python3 scripts/skill_security_check.py:*)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/Secrets.xcconfig)",
+      "Read(**/Secrets/**)",
+      "Read(**/*.secret)",
+      "Read(**/*.secrets)",
+      "Bash(cat .env*)",
+      "Bash(cat */.env*)",
+      "Bash(cat */Secrets*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -q 'npx skills add\\|npx skills install'; then cd /Users/taguchikoji/Desktop/vibecoding/second-business/No-Look-Budget && python3 scripts/skill_security_check.py --quiet 2>&1 | tail -5; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

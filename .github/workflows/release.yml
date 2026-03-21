@@ -1,0 +1,68 @@
+# No-Look-Budget リリースワークフロー
+# release/* ブランチへのpush時にTestFlightビルドの準備を行う
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    name: リリースビルド
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: Xcode バージョン設定
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: リリースビルド（Archive）
+        run: |
+          xcodebuild archive \
+            -project NoLookBudget/NoLookBudget.xcodeproj \
+            -scheme NoLookBudget \
+            -archivePath build/NoLookBudget.xcarchive \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color
+
+      # 注: 実際のTestFlight配信にはApple証明書・プロビジョニングプロファイルの
+      # Secrets設定が必要。Phase B (2026/4) で設定する。
+      # 以下はテンプレートとして用意:
+      #
+      # - name: App Store Connect APIキー設定
+      #   env:
+      #     APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      #     APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      #     APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+      #
+      # - name: TestFlight にアップロード
+      #   run: |
+      #     xcrun altool --upload-app \
+      #       --type ios \
+      #       --file build/NoLookBudget.ipa \
+      #       --apiKey $APP_STORE_CONNECT_KEY_ID \
+      #       --apiIssuer $APP_STORE_CONNECT_ISSUER_ID
+
+      - name: リリースノート生成
+        run: |
+          echo "## Release $(echo ${{ github.ref_name }})" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> RELEASE_NOTES.md 2>/dev/null || \
+          git log --pretty=format:"- %s" -20 >> RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - name: GitHub Release 作成
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: RELEASE_NOTES.md
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

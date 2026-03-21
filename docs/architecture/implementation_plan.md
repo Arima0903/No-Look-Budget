@@ -1,4 +1,4 @@
-# No-Look-Budget 実装計画 (Master Plan v2.0)
+# Orbit Budget 実装計画 (Master Plan v2.0)
 
 ## 1. 目指すゴールと提供価値 (マーケティング連動)
 本アプリのターゲットは「浪費家・ADHD傾向で継続が苦手なユーザー」です。

@@ -1,4 +1,4 @@
-# No-Look-Budget ST（システムテスト / UAT）仕様書
+# Orbit Budget ST（システムテスト / UAT）仕様書
 
 | 項目 | 内容 |
 |------|------|

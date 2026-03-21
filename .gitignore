@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────
+# 機密情報・環境変数
+# ─────────────────────────────────────────
+.env
+.env.*
+*.secret
+*.secrets
+Secrets.xcconfig
+**/Secrets/
+
+# ─────────────────────────────────────────
+# Xcode
+# ─────────────────────────────────────────
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.hmap
+*.xccheckout
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+
+# ─────────────────────────────────────────
+# macOS
+# ─────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# ─────────────────────────────────────────
+# Swift Package Manager
+# ─────────────────────────────────────────
+.build/
+Packages/
+Package.pins
+Package.resolved
+
+# ─────────────────────────────────────────
+# CocoaPods（将来使用時）
+# ─────────────────────────────────────────
+Pods/
+
+# ─────────────────────────────────────────
+# セキュリティスキャン結果
+# ─────────────────────────────────────────
+skill_security_report.json
+
+# ─────────────────────────────────────────
+# その他
+# ─────────────────────────────────────────
+*.log
+*.tmp
