@@ -1,4 +1,4 @@
-# No-Look-Budget 基本設計書
+# Orbit Budget 基本設計書
 
 | 項目 | 内容 |
 |------|------|

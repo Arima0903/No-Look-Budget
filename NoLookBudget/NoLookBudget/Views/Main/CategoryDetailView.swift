@@ -32,7 +32,11 @@ struct CategoryDetailView: View {
             
             ScrollView {
                 VStack(spacing: 30) {
-                    
+
+                    // バナー広告（無料プランのみ）
+                    BannerAdView()
+                        .padding(.top, 10)
+
                     // ヘッダー部
                     VStack(spacing: 5) {
                         Text("今月の予算")

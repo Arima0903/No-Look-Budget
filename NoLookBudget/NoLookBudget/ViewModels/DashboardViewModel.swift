@@ -219,14 +219,17 @@ class DashboardViewModel: ObservableObject {
             } else {
                 lastDay = calendar.component(.day, from: endOfSelectedMonth)
             }
-            var accumulatedSpent: Double = 0
-            let totalBudget = budget.totalAmount
+            // BudgetGaugeView と同じロジックで総枠・残りを計算する
+            let displayTotal = budget.incomeAmount ?? budget.totalAmount
+            let fixedAndSavings = displayTotal - budget.totalAmount
+            var accumulatedVarSpent: Double = 0
 
             for day in 1...lastDay {
                 if let date = calendar.date(byAdding: .day, value: day - 1, to: startOfSelectedMonth) {
-                    accumulatedSpent += dailySpent[day] ?? 0
-                    let remaining = max(0, totalBudget - accumulatedSpent)
-                    newTrends.append(DailyBudgetTrend(date: date, spent: accumulatedSpent, remaining: remaining))
+                    accumulatedVarSpent += dailySpent[day] ?? 0
+                    let totalUsed = accumulatedVarSpent + fixedAndSavings
+                    let remaining = max(0, displayTotal - totalUsed)
+                    newTrends.append(DailyBudgetTrend(date: date, spent: totalUsed, remaining: remaining))
                 }
             }
         } else {

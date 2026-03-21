@@ -203,7 +203,11 @@ struct DashboardView: View {
                         Spacer(minLength: 30)
                     }
                 }
-            
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    // ダッシュボード下部固定バナー広告（無料プランのみ表示）
+                    BannerAdView()
+                }
+
             // 宇宙飛行士マスコット（最前面レイヤー - 背景・コンテンツより手前に表示）
             VStack {
                 HStack {
@@ -655,7 +659,7 @@ struct BudgetDetailView: View {
                             .foregroundColor(.gray)
                         
                         if let budget = budget {
-                            let total = budget.totalAmount
+                            let total = budget.incomeAmount ?? budget.totalAmount
                             let calendar = Calendar.current
                             let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: budget.month)) ?? Date()
                             let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1, hour: 23, minute: 59, second: 59), to: startOfMonth) ?? Date()

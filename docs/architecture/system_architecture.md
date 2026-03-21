@@ -1,6 +1,6 @@
-# No-Look-Budget: System Architecture
+# Orbit Budget: System Architecture
 
-このドキュメントは「No-Look-Budget」アプリのシステム概要を定義します。
+このドキュメントは「Orbit Budget」アプリのシステム概要を定義します。
 
 ```mermaid
 graph TD

@@ -1,4 +1,4 @@
-# No-Look-Budget: Service Flow
+# Orbit Budget: Service Flow
 
 「開かせない」UXと「立替」分離のコアフローを定義します。
 
@@ -7,10 +7,10 @@ sequenceDiagram
     actor User as ユーザー (ADHD気質/浪費家)
     participant LockScreen as iPhone (ウィジェット)
     participant Wallet as Apple Wallet (Apple Pay)
-    participant iOSApp as アプリ本体 (No-Look-Budget)
+    participant iOSApp as アプリ本体 (Orbit Budget)
     participant LogicDB as ローカル処理・DB (SwiftData / CoreData)
 
-    %% Flow 1: 日常の「残弾」確認 (No-Look)
+    %% Flow 1: 日常の「残り予算」確認 (No-Look)
     rect rgb(30, 40, 30)
     Note over User,LockScreen: 1. No-Lookで残高を把握 (強制視界占有)
     User->>LockScreen: スマホを見る (通知や時計の確認等)

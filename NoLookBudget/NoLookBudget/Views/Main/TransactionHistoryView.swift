@@ -29,6 +29,14 @@ struct TransactionHistoryView: View {
                 }
                 
                 List {
+                    // バナー広告（無料プランのみ）
+                    Section {
+                        BannerAdView()
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
+                    }
+
                     ForEach(viewModel.displayItems) { tx in
                         Button(action: {
                             if !tx.isFixedCost {

@@ -96,7 +96,7 @@ struct NoLookBudgetWidgetEntryView: View {
 
                 // 右: 数値ブロック（ガラスパネル）
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("NoLookBudget")
+                    Text("Orbit Budget")
                         .font(.system(size: 10, weight: .black, design: .rounded))
                         .foregroundColor(.white.opacity(0.4))
                         .padding(.bottom, 6)
@@ -196,7 +196,7 @@ struct NoLookBudgetWidget: Widget {
                     )
             }
         }
-        .configurationDisplayName("No-Look-Budget")
+        .configurationDisplayName("Orbit Budget")
         .description("常に予算の一覧をホーム画面で確認できます。")
         .supportedFamilies([.systemLarge])
         .contentMarginsDisabled()

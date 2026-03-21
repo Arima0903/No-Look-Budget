@@ -1,4 +1,4 @@
-# No-Look-Budget 要件定義書
+# Orbit Budget 要件定義書
 
 | 項目 | 内容 |
 |------|------|

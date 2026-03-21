@@ -134,12 +134,12 @@ struct QuickInputModalView: View {
                             HStack {
                                 Text("みんなの立替分")
                                     .font(.subheadline).bold()
-                                    .foregroundColor(viewModel.currentFocus == .iou ? Theme.warmOrange : .gray)
+                                    .foregroundColor(viewModel.currentFocus == .iou ? .white : .gray)
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 2) {
                                     Text(viewModel.iouExpression)
                                         .font(.system(size: 36, weight: .black, design: .rounded))
-                                        .foregroundColor(viewModel.currentFocus == .iou ? Theme.warmOrange : .gray.opacity(0.5))
+                                        .foregroundColor(viewModel.currentFocus == .iou ? .white : .gray.opacity(0.5))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.4)
                                     if let res = viewModel.calculateResult(for: viewModel.iouExpression), res != viewModel.iouExpression {
@@ -154,7 +154,7 @@ struct QuickInputModalView: View {
                             .background(RoundedRectangle(cornerRadius: 15).fill(Color.white.opacity(viewModel.currentFocus == .iou ? 0.08 : 0.02)))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 15)
-                                    .stroke(viewModel.currentFocus == .iou ? Theme.warmOrange.opacity(0.5) : Color.clear, lineWidth: 2)
+                                    .stroke(viewModel.currentFocus == .iou ? Color.white.opacity(0.5) : Color.clear, lineWidth: 2)
                             )
                         }
                         
@@ -200,7 +200,7 @@ struct QuickInputModalView: View {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(viewModel.expressionText)
                             .font(.system(size: 60, weight: .black, design: .rounded))
-                            .foregroundColor(viewModel.inputMode == .income ? Theme.spaceGreen : .white)
+                            .foregroundColor(.white)
                             .lineLimit(1)
                             .minimumScaleFactor(0.4)
                             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -604,9 +604,7 @@ struct CalculatorKeypad: View {
         
         switch btn {
         case "C":
-            withAnimation(.spring()) {
-                expressionText = "0"
-            }
+            expressionText = "0"
         case "⌫":
             var nextText = expressionText
             if nextText.count > 1 {
@@ -614,9 +612,7 @@ struct CalculatorKeypad: View {
             } else {
                 nextText = "0"
             }
-            withAnimation(.spring()) {
-                expressionText = nextText
-            }
+            expressionText = nextText
         case "=":
             onCommit()
         default:
@@ -635,9 +631,7 @@ struct CalculatorKeypad: View {
                     nextText.append(btn)
                 }
             }
-            withAnimation(.spring()) {
-                expressionText = nextText
-            }
+            expressionText = nextText
         }
     }
 }

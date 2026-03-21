@@ -1,0 +1,158 @@
+# No-Look-Budget CI パイプライン
+# 3層ブランチ（main → feature → userstory）に最適化
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, 'feature/**']
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------
+  # 軽量CI: userstory → feature へのPR時（ビルド確認のみ）
+  # 目的: 高速フィードバック。コンパイルが通ることだけ確認
+  # ---------------------------------------------------------------
+  build-only:
+    name: 軽量CI（ビルド確認）
+    runs-on: macos-15
+    timeout-minutes: 15
+    if: |
+      github.event_name == 'pull_request' &&
+      startsWith(github.base_ref, 'feature/')
+
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: Xcode バージョン設定
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Swift パッケージキャッシュの復元
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: ビルド確認（Debug）
+        run: |
+          xcodebuild build \
+            -project NoLookBudget/NoLookBudget.xcodeproj \
+            -scheme NoLookBudget \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color
+
+  # ---------------------------------------------------------------
+  # フルCI: feature → main へのPR時、または main への push 時
+  # 目的: ビルド + 全テスト実行。main に入る前の品質ゲート
+  # ---------------------------------------------------------------
+  build-and-test:
+    name: フルCI（ビルド & テスト）
+    runs-on: macos-15
+    timeout-minutes: 30
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.base_ref == 'main')
+
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: Xcode バージョン設定
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Swift パッケージキャッシュの復元
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: ビルド（Debug）
+        run: |
+          xcodebuild build \
+            -project NoLookBudget/NoLookBudget.xcodeproj \
+            -scheme NoLookBudget \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color
+
+      - name: テスト実行
+        run: |
+          xcodebuild test \
+            -project NoLookBudget/NoLookBudget.xcodeproj \
+            -scheme NoLookBudget \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            -resultBundlePath TestResults \
+            | xcpretty --color
+
+      - name: テスト結果のアップロード
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+          retention-days: 7
+
+  # ---------------------------------------------------------------
+  # スキルセキュリティチェック: スキルファイルが変更されたPR時のみ
+  # 目的: 新規スキル追加時に悪意あるコードがないか自動検証
+  # ---------------------------------------------------------------
+  skill-security-check:
+    name: スキル セキュリティチェック
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: スキルファイルの変更を検出
+        id: skill-changes
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..HEAD | grep -E '\.agent/|\.agents/|skills' || true)
+          if [ -n "$CHANGED" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "変更されたスキルファイル:"
+            echo "$CHANGED"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "スキルファイルの変更なし。スキップします。"
+          fi
+
+      - name: Python セットアップ
+        if: steps.skill-changes.outputs.has_changes == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: スキルセキュリティスキャン実行
+        if: steps.skill-changes.outputs.has_changes == 'true'
+        run: python scripts/skill_security_check.py --ci
+
+      - name: セキュリティレポートのアップロード
+        if: steps.skill-changes.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-security-report
+          path: skill_security_report.json
+          retention-days: 30
