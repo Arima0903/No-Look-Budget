@@ -10,10 +10,13 @@ class CategoryDetailViewModel: ObservableObject {
     
     let categoryName: String
     private let context: ModelContext
-    
+    private let transactionService: TransactionServiceProtocol
+
     init(categoryName: String, context: ModelContext? = nil) {
         self.categoryName = categoryName
-        self.context = context ?? SharedModelContainer.shared.mainContext
+        let ctx = context ?? SharedModelContainer.shared.mainContext
+        self.context = ctx
+        self.transactionService = TransactionService(context: ctx)
         fetchData()
     }
     
@@ -52,6 +55,16 @@ class CategoryDetailViewModel: ObservableObject {
                 isFixedCost: tx.isFixedCost,
                 originalIdForEdit: tx.id
             )
+        }
+    }
+
+    /// 指定IDの取引を削除し、データを再取得する
+    func deleteTransaction(id: UUID) {
+        do {
+            try transactionService.deleteTransaction(id: id)
+            fetchData()
+        } catch {
+            print("取引の削除に失敗しました: \(error)")
         }
     }
 }

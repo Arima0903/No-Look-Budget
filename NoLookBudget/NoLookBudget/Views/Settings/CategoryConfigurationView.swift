@@ -26,7 +26,7 @@ struct CategoryConfigurationView: View {
                                         .cornerRadius(4)
                                 }
                             }
-                            Text("予算: ¥\(Int(category.totalAmount))")
+                            Text("予算: ¥\(formatCurrency(category.totalAmount))")
                                 .font(.caption)
                                 .foregroundColor(isOther ? .white.opacity(0.5) : .gray)
                         }

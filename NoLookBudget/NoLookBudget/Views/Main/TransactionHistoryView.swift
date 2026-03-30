@@ -66,12 +66,12 @@ struct TransactionHistoryView: View {
                                 Spacer()
                                 
                                 VStack(alignment: .trailing, spacing: 4) {
-                                    Text(tx.isIncome ? "+¥\(tx.totalAmount)" : "-¥\(tx.personalAmount)")
+                                    Text(tx.isIncome ? "+¥\(formatCurrency(tx.totalAmount))" : "-¥\(formatCurrency(tx.personalAmount))")
                                         .font(.system(.title3, design: .rounded).bold())
                                         .foregroundColor(tx.isIncome ? Color(red: 0.4, green: 0.9, blue: 0.6) : (tx.iouAmount > 0 ? .orange : .white))
-                                    
+
                                     if tx.iouAmount > 0 {
-                                        Text("総額 ¥\(tx.totalAmount) / 立替 ¥\(tx.iouAmount)")
+                                        Text("総額 ¥\(formatCurrency(tx.totalAmount)) / 立替 ¥\(formatCurrency(tx.iouAmount))")
                                             .font(.caption2)
                                             .foregroundColor(.gray)
                                     }

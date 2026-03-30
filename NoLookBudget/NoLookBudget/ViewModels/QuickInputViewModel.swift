@@ -132,7 +132,7 @@ class QuickInputViewModel: ObservableObject {
                 try? transactionService.addExpense(amount: myExpenseAmount, category: selectedCategory, isIOU: false, memo: memoValue)
             }
             // 完了ポップアップ用データをセット（立替総額を表示）
-            self.completionAmount = "¥\(Int(totalAmount))"
+            self.completionAmount = "¥\(formatCurrency(totalAmount))"
             self.completionCategory = (selectedCategory?.name ?? "その他") + "（立替含む）"
         } else {
             // 通常の1段入力の保存処理
@@ -154,7 +154,7 @@ class QuickInputViewModel: ObservableObject {
                 }
             }
             // 完了ポップアップ用データをセット
-            self.completionAmount = "¥\(Int(amount))"
+            self.completionAmount = "¥\(formatCurrency(amount))"
             if inputMode == .income {
                 self.completionCategory = selectedIncomeCategory ?? "収入"
             } else {

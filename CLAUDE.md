@@ -81,7 +81,7 @@ View (SwiftUI) → ViewModel → Repository → SwiftData Container
 
 ---
 
-## 7. 現在の実装状況（2026-03-16時点）
+## 7. 現在の実装状況（2026-03-21時点）
 
 ### 完了済み
 - SwiftUI UI/UXモック実装（全画面）
@@ -96,16 +96,24 @@ View (SwiftUI) → ViewModel → Repository → SwiftData Container
 - QuickInput メモ欄追加（折りたたみ式・20字）
 - ウィジェット表示値のバグ修正（ハードコード値除去）
 - ボタン文言「確定」統一
+- TutorialView / TermsConsentView（オンボーディングフロー）
+- BannerAdView（AdMob プレースホルダー・SDK未導入）
+- PrivacyPolicyView / TermsOfServiceView / UsageGuideView
+- MonthlyReviewView / PaywallView の大幅改善
+- Apple Developer Program 登録・承認完了
+- App Store Connect アプリページ作成
+- プライバシーポリシー GitHub Pages 公開
+- TestFlight 内部テスト実施中 / 外部テスト Beta App Review 審査中
 
 ### 既知のバグ
 
-なし（2026-03-16時点）
+なし（2026-03-21時点）
 
-### テスト状況（2026-03-16）
+### テスト状況（2026-03-21）
 
 - PT: 31件 100% Pass
 - IT: 14件 100% Pass
-- ST: 10件 pending（シミュレータ/実機での手動操作が必要）
+- ST: 10件 pending（TestFlight 内部テスト中に実機で順次確認予定）
 
 ### 変更履歴
 
@@ -126,15 +134,19 @@ View (SwiftUI) → ViewModel → Repository → SwiftData Container
 
 ---
 
-## 10. スキル（.agent/skills/）
+## 10. スキル（.agents/skills/）
 
-### code-reviewer
-- コードの品質・安全性・可読性チェック
-- `docs/QA/` との連携
+> スキルはすべて `.agents/skills/` に統一管理（旧 `.agent/skills/` は廃止済み）。
+> `npx skills find [query]` で新しいスキルを検索・追加できる。
 
-### ios-expert-engineer
-- SwiftUI、WidgetKit、SwiftDataの専門的なアドバイス
-- MVVM徹底、コンポーネント化、TDD実施、教育的解説
+### プロジェクト専用スキル
+- **code-reviewer** — コードの品質・安全性・可読性チェック（`/review`）
+- **ios-expert-engineer** — SwiftUI/WidgetKit/SwiftData の専門アドバイス・MVVM・TDD
 
-### find-skills
-- `npx skills` コマンドでのスキル検索・インストール支援
+### インストール済み汎用スキル
+- **swift-testing-expert** — Swift Testingフレームワークのガイダンス
+- **asc-xcode-build** — xcodebuildによるビルド・アーカイブ・App Store提出
+- **xcodebuildmcp-cli** — XcodeBuildMCP CLI経由のビルド・テスト・実行
+- **changelog-generator** — Git履歴からリリースノート自動生成（`/changelog`）
+- **accessibility-compliance** — WCAG 2.2準拠・アクセシビリティ監査
+- **landing-page-copywriter** — ランディングページのコピーライティング

@@ -103,7 +103,7 @@ struct MonthlyReviewView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                             Spacer()
-                            Text("¥\(viewModel.formatted(viewModel.targetBudget))")
+                            Text("¥\(formatCurrency(viewModel.targetBudget))")
                                 .font(.system(.body, design: .rounded).bold())
                                 .foregroundColor(.white)
                         }
@@ -112,7 +112,7 @@ struct MonthlyReviewView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                             Spacer()
-                            Text("¥\(viewModel.formatted(viewModel.actualSpent))")
+                            Text("¥\(formatCurrency(viewModel.actualSpent))")
                                 .font(.system(.body, design: .rounded).bold())
                                 .foregroundColor(.white)
                         }
@@ -125,8 +125,8 @@ struct MonthlyReviewView: View {
                                 .foregroundColor(.white)
                             Spacer()
                             Text(viewModel.isOverBudget
-                                 ? "-¥\(viewModel.formatted(viewModel.overAmount))"
-                                 : "+¥\(viewModel.formatted(viewModel.surplusAmount))")
+                                 ? "-¥\(formatCurrency(viewModel.overAmount))"
+                                 : "+¥\(formatCurrency(viewModel.surplusAmount))")
                                 .font(.system(.title2, design: .rounded).bold())
                                 .foregroundColor(viewModel.isOverBudget
                                     ? Color(red: 1.0, green: 0.4, blue: 0.4)
@@ -164,7 +164,7 @@ struct MonthlyReviewView: View {
                             Text("¥")
                                 .font(.title3.bold())
                                 .foregroundColor(Color(red: 0.4, green: 0.9, blue: 0.6))
-                            Text("\(viewModel.formatted(Double(viewModel.cumulativeSavings)))")
+                            Text("\(formatCurrency(Double(viewModel.cumulativeSavings)))")
                                 .font(.system(size: 42, weight: .black, design: .rounded))
                                 .foregroundColor(Color(red: 0.4, green: 0.9, blue: 0.6))
                                 .shadow(color: Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.4), radius: 8, x: 0, y: 0)
@@ -224,12 +224,12 @@ struct MonthlyReviewView: View {
 
                                         Spacer()
 
-                                        Text("¥\(viewModel.formatted(cat.spent))")
+                                        Text("¥\(formatCurrency(cat.spent))")
                                             .font(.system(.subheadline, design: .rounded).bold())
                                             .foregroundColor(cat.isOverBudget
                                                 ? Color(red: 1.0, green: 0.4, blue: 0.4)
                                                 : .white)
-                                        Text("/ ¥\(viewModel.formatted(cat.budget))")
+                                        Text("/ ¥\(formatCurrency(cat.budget))")
                                             .font(.caption)
                                             .foregroundColor(.gray)
                                     }
@@ -260,11 +260,11 @@ struct MonthlyReviewView: View {
                                     HStack {
                                         Spacer()
                                         if cat.isOverBudget {
-                                            Text("超過 ¥\(viewModel.formatted(abs(cat.remaining)))")
+                                            Text("超過 ¥\(formatCurrency(abs(cat.remaining)))")
                                                 .font(.caption2)
                                                 .foregroundColor(Theme.coralRed)
                                         } else {
-                                            Text("残り ¥\(viewModel.formatted(cat.remaining))")
+                                            Text("残り ¥\(formatCurrency(cat.remaining))")
                                                 .font(.caption2)
                                                 .foregroundColor(Theme.spaceGreen.opacity(0.8))
                                         }
@@ -406,7 +406,7 @@ struct AnimatedOverCategoryRing: View {
                         .foregroundColor(.gray)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
-                    Text("-¥\(formattedAmount(Int(amount)))")
+                    Text("-¥\(formatCurrency(Int(amount)))")
                         .font(.system(size: size * 0.18, weight: .black, design: .rounded))
                         .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
                         .lineLimit(1)
@@ -420,12 +420,6 @@ struct AnimatedOverCategoryRing: View {
                 animatedTrim = 1.0
             }
         }
-    }
-
-    private func formattedAmount(_ value: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 }
 

@@ -6,7 +6,19 @@ import Combine // ObservableObject, @Published に必要
 @main
 struct NoLookBudgetApp: App {
     @StateObject private var deepLinkManager = DeepLinkManager()
-    
+
+    init() {
+        // UIテスト用: リセットフラグが設定されている場合、オンボーディング状態をクリア
+        if ProcessInfo.processInfo.environment["UI_TEST_RESET"] == "1" {
+            let defaults = UserDefaults.standard
+            defaults.removeObject(forKey: "agreedTermsVersion")
+            defaults.removeObject(forKey: "hasCompletedTutorial")
+            defaults.set("", forKey: "agreedTermsVersion")
+            defaults.set(false, forKey: "hasCompletedTutorial")
+            defaults.synchronize()
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

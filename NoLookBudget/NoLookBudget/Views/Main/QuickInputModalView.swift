@@ -10,6 +10,8 @@ struct QuickInputModalView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: QuickInputViewModel
     
+    @State private var showCategoryConfig = false
+
     init(initialCategoryName: String? = nil, editingTransactionId: UUID? = nil, initialAmount: String = "0", isIncome: Bool = false, isIOU: Bool = false) {
         _viewModel = StateObject(wrappedValue: QuickInputViewModel(
             initialCategoryName: initialCategoryName,
@@ -77,6 +79,7 @@ struct QuickInputModalView: View {
                             .font(.title2)
                             .foregroundColor(.gray.opacity(0.8))
                     }
+                    .accessibilityIdentifier("closeModalButton")
                     
                     Spacer()
                     
@@ -143,7 +146,7 @@ struct QuickInputModalView: View {
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.4)
                                     if let res = viewModel.calculateResult(for: viewModel.iouExpression), res != viewModel.iouExpression {
-                                        Text("= ¥\(res)")
+                                        Text("= ¥\(formatCurrency(Int(res) ?? 0))")
                                             .font(.caption.bold())
                                             .foregroundColor(.gray)
                                     }
@@ -157,7 +160,7 @@ struct QuickInputModalView: View {
                                     .stroke(viewModel.currentFocus == .iou ? Color.white.opacity(0.5) : Color.clear, lineWidth: 2)
                             )
                         }
-                        
+
                         // 自分の支出枠
                         Button(action: {
                             let generator = UISelectionFeedbackGenerator()
@@ -178,7 +181,7 @@ struct QuickInputModalView: View {
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.4)
                                     if let res = viewModel.calculateResult(for: viewModel.myExpenseExpression), res != viewModel.myExpenseExpression {
-                                        Text("= ¥\(res)")
+                                        Text("= ¥\(formatCurrency(Int(res) ?? 0))")
                                             .font(.caption.bold())
                                             .foregroundColor(.gray)
                                     }
@@ -204,9 +207,10 @@ struct QuickInputModalView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.4)
                             .frame(maxWidth: .infinity, alignment: .trailing)
+                            .accessibilityIdentifier("amountDisplay")
                         
                         if let result = viewModel.calculateResult(), result != viewModel.expressionText {
-                            Text("= ¥\(result)")
+                            Text("= ¥\(formatCurrency(Int(result) ?? 0))")
                                 .font(.title3.bold())
                                 .foregroundColor(.gray)
                         }
@@ -242,11 +246,23 @@ struct QuickInputModalView: View {
                         }
                         .padding(.horizontal, 20)
                     } else {
-                        Text(viewModel.isIOUMode ? "対象のカテゴリ (立替用)" : "予算項目を選択")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.gray)
-                            .padding(.horizontal, 20)
+                        HStack {
+                            Text(viewModel.isIOUMode ? "対象のカテゴリ (立替用)" : "予算項目を選択")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.gray)
+                            Spacer()
+                            Button(action: { showCategoryConfig = true }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "pencil.circle.fill")
+                                    Text("編集")
+                                }
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.yellow)
+                            }
+                        }
+                        .padding(.horizontal, 20)
                         
                         LazyVGrid(columns: columns, spacing: 10) {
                             ForEach(viewModel.categories) { category in
@@ -270,6 +286,15 @@ struct QuickInputModalView: View {
                 // メモ欄（折りたたみ式・案B）
                 MemoInputSection(memo: $viewModel.memo, isExpanded: $viewModel.showMemoField)
                     .padding(.horizontal, 20)
+                    .sheet(isPresented: $showCategoryConfig, onDismiss: {
+                        // カテゴリ編集画面を閉じたらカテゴリ一覧を再取得
+                        viewModel.fetchCategories()
+                    }) {
+                        NavigationStack {
+                            CategoryConfigurationView()
+                        }
+                        .preferredColorScheme(.dark)
+                    }
 
                 Spacer(minLength: 10)
 
@@ -519,6 +544,7 @@ struct CategorySelectButton: View {
                 .shadow(color: isSelected ? (isIOUMode ? Theme.warmOrange.opacity(0.4) : Theme.spaceGreen.opacity(0.4)) : .clear, radius: 8, x: 0, y: 4)
         }
         .buttonStyle(ScaleButtonStyle())
+        .accessibilityIdentifier("category_\(title)")
     }
 }
 
@@ -558,6 +584,7 @@ struct CalculatorKeypad: View {
                                 .shadow(color: shadowColor(for: btn), radius: btn == "=" ? 10 : 0, x: 0, y: btn == "=" ? 5 : 0)
                         }
                         .buttonStyle(ScaleButtonStyle())
+                        .accessibilityIdentifier(btn == "=" ? "commitButton" : "keypad_\(btn)")
                     }
                 }
             }

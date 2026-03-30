@@ -128,6 +128,28 @@ class DashboardViewModel: ObservableObject {
         let catDesc = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])
         self.categories = (try? context.fetch(catDesc)) ?? []
 
+        // 初回起動時: デフォルトカテゴリ6種を自動生成
+        // UserDefaultsフラグで管理し、ユーザーが全削除した場合に再生成されるのを防ぐ
+        let defaultCategoryKey = "hasCreatedDefaultCategories"
+        if categories.isEmpty && !UserDefaults.standard.bool(forKey: defaultCategoryKey) {
+            let defaults: [(String, String, Int)] = [
+                ("食費", "fork.knife", 0),
+                ("交際費", "person.2.fill", 1),
+                ("日用品", "cart.fill", 2),
+                ("趣味", "gamecontroller.fill", 3),
+                ("衣服", "tshirt.fill", 4),
+                ("その他", "ellipsis.circle.fill", 5),
+            ]
+            for (name, icon, order) in defaults {
+                let cat = ItemCategory(name: name, totalAmount: 0, spentAmount: 0, iconName: icon, orderIndex: order)
+                context.insert(cat)
+            }
+            try? context.save()
+            UserDefaults.standard.set(true, forKey: defaultCategoryKey)
+            // 挿入後に再取得して categories を更新
+            self.categories = (try? context.fetch(catDesc)) ?? []
+        }
+
         // 前月の借金フラグの計算（当月表示中のみ有効）
         // budgets[1]への依存を避け、年月一致で前月レコードを正確に特定する
         self.hasDebtFromLastMonth = false

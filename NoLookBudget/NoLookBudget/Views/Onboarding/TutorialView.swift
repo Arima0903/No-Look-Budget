@@ -10,6 +10,7 @@ struct TutorialView: View {
     @State private var mascotOffset: CGFloat = 0
     @State private var mascotRotation: Double = 0
     @State private var showBubble = false
+    @State private var showWidgetGuideAlert = false
 
     /// チュートリアルの全ステップ
     private let steps: [TutorialStep] = [
@@ -154,6 +155,15 @@ struct TutorialView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .alert("ウィジェットの追加方法", isPresented: $showWidgetGuideAlert) {
+            Button("OK、追加してくる！") {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    currentStep += 1
+                }
+            }
+        } message: {
+            Text("1. ホーム画面に戻って長押し\n2. 左上の＋をタップ\n3. 「Orbit Budget」で検索\n4. 好きなサイズを選んで追加！")
+        }
         .onAppear {
             startMascotAnimation()
             withAnimation(.easeOut(duration: 0.5).delay(0.3)) {
@@ -293,6 +303,89 @@ struct TutorialView: View {
 
     // MARK: - ナビゲーションボタン
     private var navigationButtons: some View {
+        Group {
+            if currentStep == 2 {
+                widgetPromotionSection
+            } else {
+                standardNavigationButtons
+            }
+        }
+    }
+
+    // MARK: - ウィジェット配置プロモーション（Duolingo風半強制UI）
+    @ViewBuilder
+    private var widgetPromotionSection: some View {
+        VStack(spacing: 16) {
+            // メインCTA: ウィジェット追加ボタン
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                showWidgetGuideAlert = true
+            }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "plus.app.fill")
+                        .font(.title3)
+                    Text("ウィジェットを追加する")
+                        .fontWeight(.bold)
+                        .font(.body)
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            steps[currentStep].iconColor,
+                            steps[currentStep].iconColor.opacity(0.8),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .cornerRadius(16)
+                .shadow(
+                    color: steps[currentStep].iconColor.opacity(0.5),
+                    radius: 15, x: 0, y: 8
+                )
+            }
+            .buttonStyle(ScaleButtonStyle())
+
+            // 「戻る」と「あとで」を横並びに配置
+            HStack {
+                // 戻るボタン
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        currentStep -= 1
+                    }
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                        Text("戻る")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.3))
+                    .padding(.vertical, 8)
+                }
+
+                Spacer()
+
+                // 「あとで」ボタン（意図的に目立たなくする）
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        currentStep += 1
+                    }
+                }) {
+                    Text("あとで")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.3))
+                        .padding(.vertical, 8)
+                }
+            }
+        }
+    }
+
+    // MARK: - 通常のナビゲーションボタン（Step 0, 1, 3）
+    private var standardNavigationButtons: some View {
         HStack(spacing: 12) {
             // スキップ / 戻るボタン
             if currentStep > 0 {
@@ -324,6 +417,7 @@ struct TutorialView: View {
                         .padding(.vertical, 16)
                         .padding(.horizontal, 24)
                 }
+                .accessibilityIdentifier("skipButton")
             }
 
             Spacer()
@@ -370,6 +464,7 @@ struct TutorialView: View {
                 )
             }
             .buttonStyle(ScaleButtonStyle())
+            .accessibilityIdentifier("nextButton")
         }
     }
 

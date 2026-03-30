@@ -5,6 +5,66 @@
 
 ---
 
+## [2026-03-25] — 金額表示の3桁カンマ区切り対応
+
+### 改善
+
+| 項目 | 内容 |
+|---|---|
+| **変更ファイル** | `Utils/CurrencyFormatter.swift`（新規）, `Views/Main/DashboardView.swift`, `Views/Main/QuickInputModalView.swift`, `ViewModels/QuickInputViewModel.swift`, `Views/Main/CategoryDetailView.swift`, `Views/Main/TransactionHistoryView.swift`, `Views/Review/MonthlyReviewView.swift`, `ViewModels/MonthlyReviewViewModel.swift`, `Views/Settings/BudgetConfigurationView.swift`, `Views/Settings/CategoryConfigurationView.swift` |
+| **変更内容** | 共通の `formatCurrency()` ユーティリティ関数を新規作成し、アプリ全体の金額表示を3桁カンマ区切りに統一。ダッシュボード、入力モーダル、カテゴリ詳細、取引履歴、月次レビュー、予算設定、カテゴリ設定の全画面に適用。入力中の計算式（expressionText）はカンマ区切りの対象外 |
+| **変更理由** | 大きな金額（例: 150000）の視認性が悪く、ユーザーが桁数を誤認するリスクがあったため |
+
+---
+
+## [2026-03-25] — 入力モーダルからカテゴリ編集画面を直接開けるように
+
+### 機能追加
+
+| 項目 | 内容 |
+|---|---|
+| **変更ファイル** | `NoLookBudget/Views/Main/QuickInputModalView.swift` |
+| **変更内容** | QuickInputModalView の「予算項目を選択」セクションに「編集」ボタンを追加。タップで CategoryConfigurationView をモーダル表示し、カテゴリの追加・編集・削除・並び替えが可能。閉じた後はカテゴリ一覧を自動再取得。収入モード時は編集ボタン非表示 |
+| **変更理由** | 入力中にカテゴリを編集したい場合、設定画面まで戻る必要があったためUX改善 |
+
+---
+
+## [2026-03-25] — チュートリアル Step 2 にDuolingo風ウィジェット配置促進UI追加
+
+### 機能追加
+
+| 項目 | 内容 |
+|---|---|
+| **変更ファイル** | `NoLookBudget/Views/Onboarding/TutorialView.swift` |
+| **変更内容** | TutorialView の Step 2（ウィジェット配置）で、通常のナビゲーションボタンの代わりにDuolingo風の半強制UIを表示。大きな緑色CTAボタン「ウィジェットを追加する」をメインに配置し、「あとで」ボタンは意図的に小さく薄く表示。CTAタップ時はアラートで追加手順を案内し、次のステップへ進む。「戻る」ボタンも維持 |
+| **変更理由** | ウィジェット配置がアプリのコアバリュー（No-Look Experience）に直結するため、チュートリアル内で強く促すことでウィジェット設置率の向上を狙う |
+
+---
+
+## [2026-03-25] — カテゴリ詳細画面から取引の編集・削除を可能に
+
+### 機能追加
+
+| 項目 | 内容 |
+|---|---|
+| **変更ファイル** | `NoLookBudget/ViewModels/CategoryDetailViewModel.swift`, `NoLookBudget/Views/Main/CategoryDetailView.swift` |
+| **変更内容** | CategoryDetailView の履歴リストにタップで編集（QuickInputModalView表示）、スワイプで削除の機能を追加。CategoryDetailViewModel に TransactionService を導入し deleteTransaction メソッドを追加。BudgetDetailView と同じ編集パターンを採用 |
+| **変更理由** | カテゴリ詳細画面から取引の修正・削除ができず、ダッシュボードに戻る必要があったためUX改善 |
+
+---
+
+## [2026-03-25] — デフォルトカテゴリ6種の自動生成
+
+### 機能追加
+
+| 項目 | 内容 |
+|---|---|
+| **変更ファイル** | `NoLookBudget/ViewModels/DashboardViewModel.swift` |
+| **変更内容** | `fetchData()` 内でカテゴリが空かつ初回起動時にデフォルトカテゴリ6種（食費・交際費・日用品・趣味・衣服・その他）を自動生成。UserDefaults の `hasCreatedDefaultCategories` フラグで再生成を防止 |
+| **変更理由** | 初回起動時にカテゴリが空のため支出入力ができず、ユーザーが設定画面で手動作成する必要があった。UX改善のためデフォルトカテゴリを自動生成する |
+
+---
+
 ## [2026-03-17] — ダッシュボードバグ修正（円グラフ・レイアウト・バナー）
 
 ### バグ修正

@@ -39,6 +39,7 @@ struct DashboardView: View {
                                 .shadow(color: .black.opacity(0.6), radius: 4)
                                 .padding(.horizontal, 30)
                                 .padding(.top, 30)
+                                .accessibilityIdentifier("remainingBudgetLabel")
 
                             // メインの予算ゲージ（右スワイプでカレンダーに切り替え）
                             TabView {
@@ -144,6 +145,7 @@ struct DashboardView: View {
                                 .shadow(color: Theme.spaceGreen.opacity(0.4), radius: 10, x: 0, y: 5)
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .accessibilityIdentifier("addExpenseButton")
                         }
                         .padding(.horizontal, 20)
 
@@ -295,6 +297,7 @@ struct DashboardView: View {
                         .font(.title2)
                         .foregroundColor(.white)
                 }
+                .accessibilityIdentifier("sideMenuButton")
             }
         }
         .onAppear {
@@ -373,6 +376,7 @@ struct DashboardView: View {
         }
         } // End of NavigationStack
         .background(Theme.spaceNavy)
+        .accessibilityIdentifier("dashboardView")
         .preferredColorScheme(.dark) // 確実にダークモードを強制
     }
 }
@@ -467,7 +471,7 @@ struct BudgetGaugeView: View {
                 let displaySpent = (budget?.spentAmount ?? 0.0) + fixedAndSavings
                 let spentRatio = displayTotal > 0 ? (displaySpent / displayTotal) : 0.0
                 
-                Text("手取り総額: ¥\(Int(displayTotal))")
+                Text("手取り総額: ¥\(formatCurrency(displayTotal))")
                     .font(.caption2)
                     .fontWeight(.bold)
                     .foregroundColor(.white.opacity(0.65))
@@ -480,7 +484,7 @@ struct BudgetGaugeView: View {
                 
                 let remainingColor: Color = (spentRatio > 0.8) ? Theme.coralRed : ((spentRatio > 0.5) ? Theme.warmOrange : Theme.textMain)
                 
-                Text("¥\(Int(budget?.remainingAmount ?? 0))")
+                Text("¥\(formatCurrency(budget?.remainingAmount ?? 0))")
                     .font(.system(size: 34, weight: .black, design: .rounded))
                     .foregroundColor(remainingColor)
                     // グローエフェクト
@@ -496,7 +500,7 @@ struct BudgetGaugeView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white.opacity(0.65))
                 
-                Text("¥\(Int(displaySpent))")
+                Text("¥\(formatCurrency(displaySpent))")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.coralRed)
                 
@@ -568,9 +572,9 @@ struct CategoryGaugeView: View {
     
     var amountString: String {
         if amount < 0 {
-            return "-¥\(-amount)"
+            return "-¥\(formatCurrency(-amount))"
         } else {
-            return "¥\(amount)"
+            return "¥\(formatCurrency(amount))"
         }
     }
     
@@ -716,7 +720,7 @@ struct BudgetDetailView: View {
                                 // 臨時収入が合算されていることを示すテキスト
                                 HStack {
                                     Spacer()
-                                    Text("※ 臨時収入は手取り予算として合算されています [ 総枠: ¥\(Int(total)) ]")
+                                    Text("※ 臨時収入は手取り予算として合算されています [ 総枠: ¥\(formatCurrency(total)) ]")
                                         .font(.caption2)
                                         .foregroundColor(.gray)
                                 }
@@ -774,7 +778,7 @@ struct BudgetDetailView: View {
                                                     .foregroundColor(.gray)
                                             }
                                             Spacer()
-                                            Text(tx.isIncome ? "+¥\(tx.totalAmount)" : "-¥\(tx.personalAmount)")
+                                            Text(tx.isIncome ? "+¥\(formatCurrency(tx.totalAmount))" : "-¥\(formatCurrency(tx.personalAmount))")
                                                 .fontWeight(.bold)
                                                 .foregroundColor(tx.isIncome ? Color(red: 0.4, green: 0.9, blue: 0.6) : .white)
                                         }
@@ -834,20 +838,23 @@ struct SideMenuView: View {
                     .foregroundColor(.gray)
                     .padding(.top, 40)
                     .padding(.horizontal, 20)
-                
+
                 VStack(alignment: .leading, spacing: 20) {
                     MenuButton(icon: "star.circle.fill", title: "月末振り返り", color: .yellow) {
                         showSideMenu = false
                         showMonthlyReview = true
                     }
+                    .accessibilityIdentifier("menu_monthlyReview")
                     MenuButton(icon: "person.2.circle.fill", title: "立替リスト", color: .orange) {
                         showSideMenu = false
                         showIOU = true
                     }
+                    .accessibilityIdentifier("menu_iouList")
                     MenuButton(icon: "clock.arrow.circlepath", title: "支出履歴", color: .white) {
                         showSideMenu = false
                         showHistory = true
                     }
+                    .accessibilityIdentifier("menu_history")
                     Divider().background(Color.white.opacity(0.3))
                     Group {
                         Text("家計設定").font(.caption).foregroundColor(.gray)
@@ -855,19 +862,22 @@ struct SideMenuView: View {
                             showSideMenu = false
                             showBudgetConfig = true
                         }
+                        .accessibilityIdentifier("menu_budgetConfig")
                         MenuButton(icon: "list.bullet.circle.fill", title: "カテゴリの編集", color: .cyan) {
                             showSideMenu = false
                             showCategoryConfig = true
                         }
+                        .accessibilityIdentifier("menu_categoryConfig")
                     }
                     Divider().background(Color.white.opacity(0.3))
                     MenuButton(icon: "gearshape.fill", title: "アプリ設定", color: .white) {
                         showSideMenu = false
                         showSettings = true
                     }
+                    .accessibilityIdentifier("menu_settings")
                 }
                 .padding(.horizontal, 20)
-                
+
                 Spacer()
             }
         }

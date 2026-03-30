@@ -4,7 +4,8 @@ import SwiftData
 struct CategoryDetailView: View {
     let categoryName: String
     @StateObject private var viewModel: CategoryDetailViewModel
-    
+    @State private var editingTransaction: TransactionDisplayItem? = nil
+
     init(categoryName: String) {
         self.categoryName = categoryName
         _viewModel = StateObject(wrappedValue: CategoryDetailViewModel(categoryName: categoryName))
@@ -43,7 +44,7 @@ struct CategoryDetailView: View {
                             .font(.headline)
                             .foregroundColor(.gray)
                         
-                        Text("¥\(viewModel.totalBudget)")
+                        Text("¥\(formatCurrency(viewModel.totalBudget))")
                             .font(.title)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -56,7 +57,7 @@ struct CategoryDetailView: View {
                             .font(.headline)
                             .foregroundColor(.gray)
                         
-                        Text("¥\(viewModel.currentRemaining)")
+                        Text("¥\(formatCurrency(viewModel.currentRemaining))")
                             .font(.system(size: 50, weight: .black, design: .rounded))
                             .foregroundColor(Color(red: 0.4, green: 0.9, blue: 0.6))
                     }
@@ -73,7 +74,7 @@ struct CategoryDetailView: View {
                                     .foregroundColor(.white)
                             }
                             
-                            Text("-¥\(viewModel.debtAmount)")
+                            Text("-¥\(formatCurrency(viewModel.debtAmount))")
                                 .font(.title)
                                 .fontWeight(.black)
                                 .foregroundColor(Color(red: 0.9, green: 0.4, blue: 0.4))
@@ -104,31 +105,74 @@ struct CategoryDetailView: View {
                         .padding(.horizontal, 20)
                     }
                     
-                    // 履歴リスト（モック）
+                    // 履歴リスト
                     VStack(alignment: .leading, spacing: 15) {
                         Text("今月の履歴")
                             .font(.headline)
                             .foregroundColor(.white)
                             .padding(.horizontal, 20)
-                        
-                        VStack(spacing: 1) {
-                            if viewModel.transactions.isEmpty {
-                                Text("履歴がありません")
-                                    .padding()
-                                    .foregroundColor(.gray)
-                            } else {
+
+                        if viewModel.transactions.isEmpty {
+                            Text("履歴がありません")
+                                .padding()
+                                .foregroundColor(.gray)
+                                .padding(.horizontal, 20)
+                        } else {
+                            List {
                                 ForEach(viewModel.transactions) { tx in
-                                    HistoryRowView(
-                                        date: tx.date,
-                                        memo: tx.iouAmount > 0 ? "立替" : (tx.isIncome ? "収入" : "支出"),
-                                        amount: tx.totalAmount
-                                    )
+                                    Button(action: {
+                                        if !tx.isFixedCost {
+                                            editingTransaction = tx
+                                        }
+                                    }) {
+                                        HStack {
+                                            Text(tx.date)
+                                                .font(.subheadline)
+                                                .foregroundColor(.gray)
+                                                .frame(width: 50, alignment: .leading)
+
+                                            Text(tx.iouAmount > 0 ? "立替" : (tx.isIncome ? "収入" : "支出"))
+                                                .font(.body)
+                                                .foregroundColor(.white)
+
+                                            if tx.isFixedCost {
+                                                Image(systemName: "lock.fill")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.gray)
+                                            }
+
+                                            Spacer()
+
+                                            Text("-¥\(tx.totalAmount)")
+                                                .font(.body)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.white)
+
+                                            if !tx.isFixedCost {
+                                                Image(systemName: "chevron.right")
+                                                    .font(.caption)
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
+                                        .padding(.vertical, 4)
+                                    }
+                                    .listRowBackground(Color(red: 0.18, green: 0.18, blue: 0.19))
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        if !tx.isFixedCost {
+                                            Button(role: .destructive) {
+                                                viewModel.deleteTransaction(id: tx.id)
+                                            } label: {
+                                                Label("削除", systemImage: "trash")
+                                            }
+                                        }
+                                    }
                                 }
                             }
+                            .listStyle(.plain)
+                            .frame(height: CGFloat(viewModel.transactions.count * 52) + 20)
+                            .scrollDisabled(true)
+                            .padding(.horizontal, 20)
                         }
-                        .background(Color(white: 0.2))
-                        .cornerRadius(10)
-                        .padding(.horizontal, 20)
                     }
                     
                     Spacer(minLength: 50)
@@ -139,6 +183,19 @@ struct CategoryDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.fetchData()
+        }
+        .sheet(item: $editingTransaction, onDismiss: {
+            viewModel.fetchData()
+        }) { tx in
+            QuickInputModalView(
+                initialCategoryName: tx.isIncome ? nil : tx.category,
+                editingTransactionId: tx.id,
+                initialAmount: "\(tx.totalAmount)",
+                isIncome: tx.isIncome,
+                isIOU: tx.iouAmount > 0
+            )
+            .presentationDetents([.large])
+            .preferredColorScheme(.dark)
         }
         .preferredColorScheme(.dark)
     }
@@ -162,7 +219,7 @@ struct HistoryRowView: View {
             
             Spacer()
             
-            Text("-¥\(amount)")
+            Text("-¥\(formatCurrency(amount))")
                 .font(.body)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
