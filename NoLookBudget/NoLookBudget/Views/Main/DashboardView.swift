@@ -33,6 +33,20 @@ struct DashboardView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
                         VStack(alignment: .leading, spacing: 5) {
+                            // 宇宙飛行士マスコット（コンテンツと一緒にスクロール）
+                            HStack {
+                                Spacer()
+                                Image("astronaut_mascot")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 100, height: 100)
+                                    .shadow(color: .black.opacity(0.6), radius: 12, x: 0, y: 6)
+                                    .padding(.trailing, 7)
+                            }
+                            .allowsHitTesting(false)
+                            .padding(.top, -10)
+                            .padding(.bottom, -80) // 下の要素と重ねて表示
+
                             Text(viewModel.isCurrentMonth ? "今月の残り予算" : "\(viewModel.selectedMonthTitle)の残り予算")
                                 .font(.headline)
                                 .foregroundColor(.white.opacity(0.85))
@@ -210,21 +224,7 @@ struct DashboardView: View {
                     BannerAdView()
                 }
 
-            // 宇宙飛行士マスコット（最前面レイヤー - 背景・コンテンツより手前に表示）
-            VStack {
-                HStack {
-                    Spacer()
-                    Image("astronaut_mascot")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 100, height: 100)
-                        .shadow(color: .black.opacity(0.6), radius: 12, x: 0, y: 6)
-                        .padding(.top, 45)
-                        .padding(.trailing, 7)
-                }
-                Spacer()
-            }
-            .allowsHitTesting(false) // タッチイベントを透過させスクロールを妨げない
+            // 宇宙飛行士マスコットはScrollView内に移動済み（スクロールと連動）
 
             // サイドメニューのオーバーレイ
             if viewModel.showSideMenu {
