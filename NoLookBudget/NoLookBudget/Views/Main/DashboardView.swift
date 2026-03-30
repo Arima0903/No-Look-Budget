@@ -17,6 +17,22 @@ struct DashboardView: View {
                     .scaledToFill()
                     .ignoresSafeArea()
                 
+                // 宇宙飛行士マスコット（背景と円グラフの間のレイヤー・固定位置）
+                VStack {
+                    HStack {
+                        Spacer()
+                        Image("astronaut_mascot")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 100, height: 100)
+                            .shadow(color: .black.opacity(0.6), radius: 12, x: 0, y: 6)
+                            .padding(.top, 45)
+                            .padding(.trailing, 7)
+                    }
+                    Spacer()
+                }
+                .allowsHitTesting(false)
+
                 // 予算オーバー時の警告グローエフェクト
                 if let bg = viewModel.currentBudget, bg.spentAmount > bg.totalAmount {
                     RadialGradient(
@@ -209,22 +225,6 @@ struct DashboardView: View {
                     // ダッシュボード下部固定バナー広告（無料プランのみ表示）
                     BannerAdView()
                 }
-
-            // 宇宙飛行士マスコット（最前面レイヤー - 背景・コンテンツより手前に表示）
-            VStack {
-                HStack {
-                    Spacer()
-                    Image("astronaut_mascot")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 100, height: 100)
-                        .shadow(color: .black.opacity(0.6), radius: 12, x: 0, y: 6)
-                        .padding(.top, 45)
-                        .padding(.trailing, 7)
-                }
-                Spacer()
-            }
-            .allowsHitTesting(false) // タッチイベントを透過させスクロールを妨げない
 
             // サイドメニューのオーバーレイ
             if viewModel.showSideMenu {
