@@ -49,11 +49,9 @@ class MonthlyReviewViewModel: ObservableObject {
         max(0, targetBudget - actualSpent)
     }
 
-    // カンマ区切りフォーマット
+    // カンマ区切りフォーマット（共通ユーティリティに委譲）
     func formatted(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        return formatter.string(from: NSNumber(value: Int(value))) ?? "\(Int(value))"
+        formatCurrency(value)
     }
 
     func fetchData() {

@@ -78,7 +78,7 @@ struct BudgetConfigurationView: View {
                                 Text(cost.name)
                                     .foregroundColor(.white)
                                 Spacer()
-                                Text("¥\(Int(cost.amount))")
+                                Text("¥\(formatCurrency(cost.amount))")
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
                                 Image(systemName: "chevron.right")
@@ -112,7 +112,7 @@ struct BudgetConfigurationView: View {
                 let calculatedBaseBudget = max(0, income - savings - totalFixed)
                 
                 HStack {
-                    Text("¥\(Int(calculatedBaseBudget))")
+                    Text("¥\(formatCurrency(calculatedBaseBudget))")
                         .font(.system(size: 24, weight: .black, design: .rounded))
                         .foregroundColor(Color(red: 0.4, green: 0.9, blue: 0.6))
                     Spacer()

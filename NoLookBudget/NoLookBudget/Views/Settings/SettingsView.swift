@@ -103,6 +103,7 @@ struct SettingsView: View {
                 PaywallView()
             }
         }
+        .accessibilityIdentifier("settingsView")
     }
 }
 

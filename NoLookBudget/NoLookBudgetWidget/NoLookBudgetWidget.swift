@@ -172,6 +172,151 @@ struct NoLookBudgetWidgetEntryView: View {
     }
 }
 
+// MARK: - サイズ別ルーター
+
+struct NoLookBudgetWidgetRouter: View {
+    @Environment(\.widgetFamily) var family
+    var entry: SimpleEntry
+
+    var body: some View {
+        switch family {
+        case .systemMedium:
+            MediumWidgetView(entry: entry)
+        default:
+            NoLookBudgetWidgetEntryView(entry: entry)
+        }
+    }
+}
+
+// MARK: - Medium ウィジェットビュー
+
+struct MediumWidgetView: View {
+    var entry: SimpleEntry
+
+    private var topCategories: [CategoryData] {
+        Array(entry.categories.sorted { $0.ratio > $1.ratio }.prefix(4))
+    }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            // 上段: メインゲージ + 数値パネル
+            HStack(spacing: 10) {
+                Link(destination: URL(string: "nolookbudget://dashboard")!) {
+                    WidgetBudgetGaugeView(
+                        totalAmount: entry.budgetTotal,
+                        spentAmount: entry.budgetSpent
+                    )
+                    .frame(width: 70, height: 70)
+                }
+
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Orbit Budget")
+                        .font(.system(size: 8, weight: .black, design: .rounded))
+                        .foregroundColor(.white.opacity(0.35))
+                        .padding(.bottom, 4)
+
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("手取り総額")
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.6))
+                            Text("¥\(Int(entry.budgetTotal))")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.4), radius: 3)
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("使用済")
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.6))
+                            Text("¥\(Int(entry.budgetSpent))")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(Theme.coralRed)
+                                .shadow(color: Theme.coralRed.opacity(0.5), radius: 4)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+
+            // 区切り線
+            Rectangle()
+                .fill(Color.white.opacity(0.1))
+                .frame(height: 0.5)
+                .padding(.horizontal, 14)
+
+            // 下段: カテゴリ横バー（最大4件）
+            VStack(spacing: 4) {
+                ForEach(topCategories, id: \.name) { cat in
+                    Link(destination: URL(
+                        string: "nolookbudget://category/\(cat.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "")"
+                    )!) {
+                        MediumCategoryBarView(category: cat)
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 14)
+        .padding(.bottom, 8)
+    }
+}
+
+// MARK: - Medium用カテゴリ横バー
+
+struct MediumCategoryBarView: View {
+    let category: CategoryData
+
+    private var barColor: Color {
+        if category.ratio >= 1.0 { return Theme.coralRed }
+        if category.ratio > 0.5 { return Theme.warmOrange }
+        return Theme.spaceGreen
+    }
+
+    private var amountString: String {
+        category.amount < 0 ? "-¥\(-category.amount)" : "¥\(category.amount)"
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(category.name)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.white.opacity(0.8))
+                .frame(width: 36, alignment: .leading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.1))
+                        .frame(height: 6)
+                    Capsule()
+                        .fill(barColor)
+                        .frame(
+                            width: max(geo.size.width * min(max(CGFloat(category.ratio), 0), 1), 4),
+                            height: 6
+                        )
+                        .shadow(color: barColor.opacity(0.4), radius: 3)
+                }
+                .frame(maxHeight: .infinity, alignment: .center)
+            }
+            .frame(height: 12)
+
+            Text(amountString)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundColor(barColor)
+                .frame(width: 50, alignment: .trailing)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+        }
+    }
+}
+
 // MARK: - Widget Configuration
 
 struct NoLookBudgetWidget: Widget {
@@ -180,7 +325,7 @@ struct NoLookBudgetWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             if #available(iOS 17.0, *) {
-                NoLookBudgetWidgetEntryView(entry: entry)
+                NoLookBudgetWidgetRouter(entry: entry)
                     .containerBackground(for: .widget) {
                         // 星空背景（アプリ本体と統一・ここだけで管理）
                         Image("starfield_background")
@@ -188,7 +333,7 @@ struct NoLookBudgetWidget: Widget {
                             .scaledToFill()
                     }
             } else {
-                NoLookBudgetWidgetEntryView(entry: entry)
+                NoLookBudgetWidgetRouter(entry: entry)
                     .background(
                         Image("starfield_background")
                             .resizable()
@@ -198,7 +343,7 @@ struct NoLookBudgetWidget: Widget {
         }
         .configurationDisplayName("Orbit Budget")
         .description("常に予算の一覧をホーム画面で確認できます。")
-        .supportedFamilies([.systemLarge])
+        .supportedFamilies([.systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
 }
@@ -336,12 +481,23 @@ struct WidgetCategoryGaugeView: View {
     }
 }
 
-#Preview(as: .systemLarge) {
+#Preview("Large", as: .systemLarge) {
     NoLookBudgetWidget()
 } timeline: {
     SimpleEntry(date: .now, budgetTotal: 250000, budgetSpent: 100000, categories: [
         CategoryData(name: "食費", amount: 20000, ratio: 0.8),
         CategoryData(name: "交際費", amount: 15000, ratio: 0.4),
         CategoryData(name: "変動費", amount: 15000, ratio: 0.1)
+    ])
+}
+
+#Preview("Medium", as: .systemMedium) {
+    NoLookBudgetWidget()
+} timeline: {
+    SimpleEntry(date: .now, budgetTotal: 250000, budgetSpent: 100000, categories: [
+        CategoryData(name: "食費", amount: 20000, ratio: 0.8),
+        CategoryData(name: "交際費", amount: 15000, ratio: 0.4),
+        CategoryData(name: "日用品", amount: 15000, ratio: 0.1),
+        CategoryData(name: "趣味", amount: 8000, ratio: 0.6)
     ])
 }

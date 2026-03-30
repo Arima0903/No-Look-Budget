@@ -119,6 +119,7 @@ struct TermsConsentView: View {
                         .shadow(color: Color(red: 0.4, green: 0.9, blue: 0.6).opacity(0.4), radius: 10, x: 0, y: 5)
                     }
                     .buttonStyle(ScaleButtonStyle())
+                    .accessibilityIdentifier("agreeButton")
 
                     Text("「同意してはじめる」をタップすることで、利用規約および\nプライバシーポリシーに同意したものとみなします。")
                         .font(.caption2)
