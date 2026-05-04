@@ -1,9 +1,12 @@
 import SwiftUI
+import StoreKit
 
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("isPremiumEnabled") private var isPremiumEnabled = false
+    @ObservedObject private var storeKit = StoreKitManager.shared
     @State private var animateFeatures = false
+    @State private var isPurchasing = false
 
     var body: some View {
         ZStack {
@@ -121,20 +124,44 @@ struct PaywallView: View {
                     .opacity(animateFeatures ? 1 : 0)
                     .offset(y: animateFeatures ? 0 : 20)
 
+                    // ─── エラー表示 ───────────────────────────────
+                    if let error = storeKit.purchaseError {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 20)
+                    }
+
                     // ─── 購入ボタン ───────────────────────────────
                     VStack(spacing: 12) {
                         Button(action: {
-                            // TODO: StoreKit購入処理
                             let generator = UIImpactFeedbackGenerator(style: .medium)
                             generator.impactOccurred()
+                            isPurchasing = true
+                            Task {
+                                await storeKit.purchase()
+                                isPurchasing = false
+                                // 購入成功時は画面を閉じる
+                                if storeKit.isPremium {
+                                    dismiss()
+                                }
+                            }
                         }) {
                             VStack(spacing: 4) {
-                                Text("COMMANDER PLANを始める")
-                                    .font(.headline.bold())
-                                    .foregroundColor(.black)
-                                Text("¥300 / 月　　7日間無料トライアル付き")
-                                    .font(.caption)
-                                    .foregroundColor(.black.opacity(0.6))
+                                if isPurchasing {
+                                    ProgressView()
+                                        .tint(.black)
+                                        .padding(.vertical, 4)
+                                } else {
+                                    // App Storeから取得した価格を表示（取得前はデフォルト表示）
+                                    let priceText = storeKit.products.first?.displayPrice ?? "¥300"
+                                    Text("COMMANDER PLANを始める")
+                                        .font(.headline.bold())
+                                        .foregroundColor(.black)
+                                    Text("\(priceText) / 月　　7日間無料トライアル付き")
+                                        .font(.caption)
+                                        .foregroundColor(.black.opacity(0.6))
+                                }
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
@@ -148,9 +175,15 @@ struct PaywallView: View {
                             .shadow(color: .orange.opacity(0.4), radius: 12, x: 0, y: 6)
                         }
                         .buttonStyle(ScaleButtonStyle())
+                        .disabled(isPurchasing)
 
                         Button(action: {
-                            // TODO: 購入の復元処理
+                            Task {
+                                await storeKit.restorePurchases()
+                                if storeKit.isPremium {
+                                    dismiss()
+                                }
+                            }
                         }) {
                             Text("購入を復元する")
                                 .font(.caption)

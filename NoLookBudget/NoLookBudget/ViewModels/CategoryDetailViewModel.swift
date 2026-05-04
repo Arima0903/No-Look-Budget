@@ -7,10 +7,13 @@ import Combine
 class CategoryDetailViewModel: ObservableObject {
     @Published var category: ItemCategory?
     @Published var transactions: [TransactionDisplayItem] = []
-    
+
     let categoryName: String
     private let context: ModelContext
     private let transactionService: TransactionServiceProtocol
+
+    /// 当月のトランザクションから計算した支出合計
+    private var monthlySpentAmount: Double = 0
 
     init(categoryName: String, context: ModelContext? = nil) {
         self.categoryName = categoryName
@@ -19,31 +22,55 @@ class CategoryDetailViewModel: ObservableObject {
         self.transactionService = TransactionService(context: ctx)
         fetchData()
     }
-    
+
     var totalBudget: Int { Int(category?.totalAmount ?? 0) }
-    var currentRemaining: Int { Int(category?.remainingAmount ?? 0) }
+
+    /// 当月のトランザクションから算出した残り予算
+    var currentRemaining: Int {
+        Int((category?.totalAmount ?? 0) - monthlySpentAmount)
+    }
+
+    /// 当月のトランザクションから算出した超過額
     var debtAmount: Int {
         guard let cat = category else { return 0 }
-        return cat.spentAmount > cat.totalAmount ? Int(cat.spentAmount - cat.totalAmount) : 0
+        return monthlySpentAmount > cat.totalAmount ? Int(monthlySpentAmount - cat.totalAmount) : 0
     }
-    
+
     func fetchData() {
         let name = self.categoryName
         let catDesc = FetchDescriptor<ItemCategory>(predicate: #Predicate { $0.name == name })
         self.category = (try? context.fetch(catDesc))?.first
-        
+
         guard let catId = category?.id else { return }
-        
-        // PredicateでのOptional UUID比較
+
+        // 当月の開始日・終了日を計算
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
+        var nextMonthComponents = DateComponents()
+        nextMonthComponents.month = 1
+        nextMonthComponents.second = -1
+        let endOfMonth = calendar.date(byAdding: nextMonthComponents, to: startOfMonth)!
+
+        // 当月のトランザクションのみ取得
         let txDesc = FetchDescriptor<ExpenseTransaction>(
-            predicate: #Predicate { $0.categoryId == catId },
+            predicate: #Predicate {
+                $0.categoryId == catId &&
+                $0.date >= startOfMonth &&
+                $0.date <= endOfMonth
+            },
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )
         let fetchedTx = (try? context.fetch(txDesc)) ?? []
-        
+
+        // 当月の支出合計をトランザクションから直接計算（立替・固定費は除外）
+        monthlySpentAmount = fetchedTx
+            .filter { !$0.isIncome && !$0.isIOU && !$0.isFixedCost }
+            .reduce(0) { $0 + $1.amount }
+
         let formatter = DateFormatter()
         formatter.dateFormat = "MM/dd"
-        
+
         self.transactions = fetchedTx.map { tx in
             TransactionDisplayItem(
                 id: tx.id,
@@ -64,7 +91,7 @@ class CategoryDetailViewModel: ObservableObject {
             try transactionService.deleteTransaction(id: id)
             fetchData()
         } catch {
-            print("取引の削除に失敗しました: \(error)")
+            // エラーは握りつぶさず将来的にはアラート表示等で対応
         }
     }
 }

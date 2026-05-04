@@ -6,6 +6,7 @@ import Combine // ObservableObject, @Published に必要
 @main
 struct NoLookBudgetApp: App {
     @StateObject private var deepLinkManager = DeepLinkManager()
+    // StoreKitManager.shared はinit()で自動起動されるため、明示的な保持不要
 
     init() {
         // UIテスト用: リセットフラグが設定されている場合、オンボーディング状態をクリア
