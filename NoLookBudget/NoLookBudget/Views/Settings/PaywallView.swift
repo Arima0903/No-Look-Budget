@@ -154,11 +154,11 @@ struct PaywallView: View {
                                         .padding(.vertical, 4)
                                 } else {
                                     // App Storeから取得した価格を表示（取得前はデフォルト表示）
-                                    let priceText = storeKit.products.first?.displayPrice ?? "¥300"
+                                    let priceText = storeKit.products.first?.displayPrice ?? "¥450"
                                     Text("COMMANDER PLANを始める")
                                         .font(.headline.bold())
                                         .foregroundColor(.black)
-                                    Text("\(priceText) / 月　　7日間無料トライアル付き")
+                                    Text("\(priceText) / 月　　初月無料")
                                         .font(.caption)
                                         .foregroundColor(.black.opacity(0.6))
                                 }
