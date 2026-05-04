@@ -31,16 +31,40 @@ class TransactionService: TransactionServiceProtocol {
     }
     
     // 現在の年月に対応する予算レコードを取得するヘルパー
+    // 当月のBudgetが存在しない場合は前月から設定を引き継いで新規作成する
     private func getCurrentMonthBudget() -> Budget? {
         let descriptor = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
         let budgets = (try? context.fetch(descriptor)) ?? []
         let calendar = Calendar.current
         let currentYearMonth = calendar.dateComponents([.year, .month], from: Date())
-        
-        return budgets.first(where: {
+
+        if let current = budgets.first(where: {
             let bComponents = calendar.dateComponents([.year, .month], from: $0.month)
             return bComponents.year == currentYearMonth.year && bComponents.month == currentYearMonth.month
-        }) ?? budgets.first
+        }) {
+            return current
+        }
+
+        // 当月のBudgetが存在しない場合：前月から設定を引き継いで新規作成
+        let now = Date()
+        let startOfMonth = calendar.date(from: currentYearMonth) ?? now
+
+        if let prevBudget = budgets.first {
+            // 前月が赤字の場合は借金を繰り越す
+            let overAmount = max(0, prevBudget.spentAmount - prevBudget.totalAmount)
+            let newBudget = Budget(
+                month: startOfMonth,
+                totalAmount: prevBudget.totalAmount,
+                spentAmount: overAmount,
+                incomeAmount: prevBudget.incomeAmount,
+                savingsAmount: prevBudget.savingsAmount
+            )
+            context.insert(newBudget)
+            try? context.save()
+            return newBudget
+        }
+
+        return nil
     }
     
     // 支出または立替を追加する
@@ -254,23 +278,48 @@ class TransactionService: TransactionServiceProtocol {
         let catDesc = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])
         let cats = (try? context.fetch(catDesc)) ?? []
 
+        // 当月のカテゴリ別支出額を ExpenseTransaction から集計
+        var monthlyCatSpent: [UUID: Double] = [:]
+        if let startOfMonth = calendar.date(from: currentYM),
+           let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1, hour: 23, minute: 59, second: 59), to: startOfMonth) {
+            let txPredicate = #Predicate<ExpenseTransaction> { tx in
+                tx.date >= startOfMonth && tx.date <= endOfMonth
+                && tx.isIncome == false && tx.isIOU == false && tx.isFixedCost == false
+            }
+            let txDesc = FetchDescriptor<ExpenseTransaction>(predicate: txPredicate)
+            let monthlyTxs = (try? context.fetch(txDesc)) ?? []
+            for tx in monthlyTxs {
+                if let catId = tx.categoryId {
+                    monthlyCatSpent[catId, default: 0] += tx.amount
+                }
+            }
+        }
+
         // JSON エンコードして保存
         struct CatSnap: Encodable {
             let name: String; let remainingAmount: Int; let ratio: Double
         }
         struct Snap: Encodable {
-            let budgetTotal: Double; let budgetSpent: Double; let categories: [CatSnap]
+            let budgetTotal: Double; let budgetSpent: Double; let categories: [CatSnap]; let usePercentageDisplay: Bool
         }
+        // ウィジェットのパーセント表示設定を取得（プレミアムユーザーのオプション）
+        let usePercentage = UserDefaults.standard.bool(forKey: "widgetPercentageDisplay")
+        let isPremiumFlag = UserDefaults.standard.bool(forKey: "isPremiumEnabled")
+        let maxCats = isPremiumFlag ? 9 : 6
+        let displayCats = cats.filter { $0.name != "その他" }
+
         let snap = Snap(
             budgetTotal: displayTotal,
             budgetSpent: budgetSpent,
-            categories: cats.prefix(6).map {
-                CatSnap(
-                    name: $0.name,
-                    remainingAmount: Int($0.totalAmount - $0.spentAmount),
-                    ratio: $0.totalAmount > 0 ? ($0.spentAmount / $0.totalAmount) : 0.0
+            categories: Array(displayCats.prefix(maxCats)).map { cat in
+                let spent = monthlyCatSpent[cat.id] ?? 0
+                return CatSnap(
+                    name: cat.name,
+                    remainingAmount: Int(cat.totalAmount - spent),
+                    ratio: cat.totalAmount > 0 ? (spent / cat.totalAmount) : 0.0
                 )
-            }
+            },
+            usePercentageDisplay: usePercentage
         )
         if let encoded = try? JSONEncoder().encode(snap) {
             defaults.set(encoded, forKey: key)

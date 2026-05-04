@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import SwiftUI
 import Combine
+import WidgetKit
 
 struct DailyBudgetTrend: Identifiable {
     let id = UUID()
@@ -30,7 +31,9 @@ class DashboardViewModel: ObservableObject {
     @Published var initialInputCategory: String? = nil
 
     @Published var hasDebtFromLastMonth = false // ToDo: 実データに基づく判定
+    @Published var hasMonthlyReviewAvailable = false // 前月の振り返りレポートが利用可能か
     @Published var dailySpending: [Int: Double] = [:]  // 日付(1〜31)→その日の合計支出（カレンダー用）
+    @Published var categoryMonthlySpent: [UUID: Double] = [:]  // カテゴリID→選択月の支出額
 
     // 年月セレクタ: 選択中の年・月（デフォルトは当月）
     @Published var selectedYear: Int = Calendar.current.component(.year, from: Date())
@@ -128,17 +131,22 @@ class DashboardViewModel: ObservableObject {
         let catDesc = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])
         self.categories = (try? context.fetch(catDesc)) ?? []
 
-        // 初回起動時: デフォルトカテゴリ6種を自動生成
-        // UserDefaultsフラグで管理し、ユーザーが全削除した場合に再生成されるのを防ぐ
-        let defaultCategoryKey = "hasCreatedDefaultCategories"
-        if categories.isEmpty && !UserDefaults.standard.bool(forKey: defaultCategoryKey) {
+        // マイグレーション: 旧カテゴリを削除して新しい固定6カテゴリ + その他を作成
+        let defaultCategoryKey = "hasCreatedDefaultCategories_v3"
+        if !UserDefaults.standard.bool(forKey: defaultCategoryKey) {
+            // 既存の全カテゴリを削除
+            for cat in categories {
+                context.delete(cat)
+            }
+            // 新しい固定カテゴリを作成
             let defaults: [(String, String, Int)] = [
                 ("食費", "fork.knife", 0),
                 ("交際費", "person.2.fill", 1),
                 ("日用品", "cart.fill", 2),
-                ("趣味", "gamecontroller.fill", 3),
-                ("衣服", "tshirt.fill", 4),
-                ("その他", "ellipsis.circle.fill", 5),
+                ("趣味・娯楽", "gamecontroller.fill", 3),
+                ("交通費", "tram.fill", 4),
+                ("美容・衣服", "tshirt.fill", 5),
+                ("その他", "ellipsis.circle.fill", 6),
             ]
             for (name, icon, order) in defaults {
                 let cat = ItemCategory(name: name, totalAmount: 0, spentAmount: 0, iconName: icon, orderIndex: order)
@@ -150,17 +158,22 @@ class DashboardViewModel: ObservableObject {
             self.categories = (try? context.fetch(catDesc)) ?? []
         }
 
-        // 前月の借金フラグの計算（当月表示中のみ有効）
-        // budgets[1]への依存を避け、年月一致で前月レコードを正確に特定する
+        // 前月の借金フラグ＆振り返りレポート可否の計算（当月表示中のみ有効）
         self.hasDebtFromLastMonth = false
+        self.hasMonthlyReviewAvailable = false
         if isCurrentMonth,
            let prevMonthDate = calendar.date(byAdding: .month, value: -1, to: Date()) {
             let prevYM = calendar.dateComponents([.year, .month], from: prevMonthDate)
             if let prev = budgets.first(where: {
                 let c = calendar.dateComponents([.year, .month], from: $0.month)
                 return c.year == prevYM.year && c.month == prevYM.month
-            }), prev.spentAmount > prev.totalAmount, !prev.hasSetDebtRecovery {
-                self.hasDebtFromLastMonth = true
+            }) {
+                // 前月のBudgetデータがあれば振り返りレポートを利用可能にする
+                self.hasMonthlyReviewAvailable = true
+                // 前月が赤字かつ未精算なら借金警告を表示
+                if prev.spentAmount > prev.totalAmount && !prev.hasSetDebtRecovery {
+                    self.hasDebtFromLastMonth = true
+                }
             }
         }
 
@@ -216,24 +229,34 @@ class DashboardViewModel: ObservableObject {
             )
         }
 
+        // 選択月の全トランザクションを取得（カテゴリ別集計・日別推移用）
+        let allTxDesc = FetchDescriptor<ExpenseTransaction>(
+            predicate: #Predicate<ExpenseTransaction> { tx in
+                tx.date >= startOfSelectedMonth && tx.date <= endOfSelectedMonth
+            },
+            sortBy: [SortDescriptor(\.date, order: .forward)]
+        )
+        let allMonthTxs = (try? context.fetch(allTxDesc)) ?? []
+
+        // カテゴリ別月間支出額とカレンダー用日別支出を同時に集計
+        var monthlyCatSpent: [UUID: Double] = [:]
+        var dailySpent: [Int: Double] = [:]
+        for tx in allMonthTxs {
+            if !tx.isIncome && !tx.isIOU {
+                let day = calendar.component(.day, from: tx.date)
+                dailySpent[day, default: 0] += tx.amount
+                // カテゴリ別（固定費は除外）
+                if !tx.isFixedCost, let catId = tx.categoryId {
+                    monthlyCatSpent[catId, default: 0] += tx.amount
+                }
+            }
+        }
+        self.categoryMonthlySpent = monthlyCatSpent
+        self.dailySpending = dailySpent
+
         // グラフ用: 日次の推移データを計算（選択月）
         var newTrends: [DailyBudgetTrend] = []
         if let budget = currentBudget {
-            let txDescAll = FetchDescriptor<ExpenseTransaction>(predicate: #Predicate { tx in
-                tx.date >= startOfSelectedMonth && tx.date <= endOfSelectedMonth
-            }, sortBy: [SortDescriptor(\.date, order: .forward)])
-
-            let allMonthTxs = (try? context.fetch(txDescAll)) ?? []
-            var dailySpent: [Int: Double] = [:]
-
-            for tx in allMonthTxs {
-                if !tx.isIncome && !tx.isIOU {
-                    let day = calendar.component(.day, from: tx.date)
-                    dailySpent[day, default: 0] += tx.amount
-                }
-            }
-            self.dailySpending = dailySpent  // カレンダービュー用に保持
-
             // トレンドは当月なら本日まで、過去月なら月末まで
             let lastDay: Int
             if isCurrentMonth {
@@ -283,22 +306,31 @@ class DashboardViewModel: ObservableObject {
             let name: String; let remainingAmount: Int; let ratio: Double
         }
         struct Snap: Encodable {
-            let budgetTotal: Double; let budgetSpent: Double; let categories: [CatSnap]
+            let budgetTotal: Double; let budgetSpent: Double; let categories: [CatSnap]; let usePercentageDisplay: Bool
         }
+        let usePercentage = UserDefaults.standard.bool(forKey: "widgetPercentageDisplay")
+        let isPremium = UserDefaults.standard.bool(forKey: "isPremiumEnabled")
+        // プレミアム: 最大9カテゴリ、無償: 6カテゴリ（その他は除外）
+        let displayCats = categories.filter { $0.name != ConfigurationViewModel.otherCategoryName }
+        let maxCats = isPremium ? 9 : 6
         let snap = Snap(
             budgetTotal: displayTotal,
             budgetSpent: budgetSpent,
-            categories: categories.prefix(6).map {
-                CatSnap(
-                    name: $0.name,
-                    remainingAmount: Int($0.totalAmount - $0.spentAmount),
-                    ratio: $0.totalAmount > 0 ? ($0.spentAmount / $0.totalAmount) : 0.0
+            categories: Array(displayCats.prefix(maxCats)).map { cat in
+                let monthlySpent = categoryMonthlySpent[cat.id] ?? 0
+                return CatSnap(
+                    name: cat.name,
+                    remainingAmount: Int(cat.totalAmount - monthlySpent),
+                    ratio: cat.totalAmount > 0 ? (monthlySpent / cat.totalAmount) : 0.0
                 )
-            }
+            },
+            usePercentageDisplay: usePercentage
         )
         if let encoded = try? JSONEncoder().encode(snap) {
             defaults.set(encoded, forKey: key)
         }
+        // ウィジェットに即時反映
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // 直近トランザクションの削除

@@ -7,7 +7,7 @@ struct Provider: TimelineProvider {
         SimpleEntry(date: Date(), budgetTotal: 250000, budgetSpent: 100000, categories: [
             CategoryData(name: "食費", amount: 20000, ratio: 0.8),
             CategoryData(name: "交際費", amount: 15000, ratio: 0.4)
-        ])
+        ], usePercentageDisplay: false)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
@@ -35,7 +35,7 @@ struct Provider: TimelineProvider {
             let defaults = UserDefaults(suiteName: suiteName),
             let data = defaults.data(forKey: key)
         else {
-            return SimpleEntry(date: Date(), budgetTotal: 0, budgetSpent: 0, categories: [])
+            return SimpleEntry(date: Date(), budgetTotal: 0, budgetSpent: 0, categories: [], usePercentageDisplay: false)
         }
 
         // Codable スナップショット（WidgetDataManager と同じ構造）
@@ -43,6 +43,7 @@ struct Provider: TimelineProvider {
             let budgetTotal: Double
             let budgetSpent: Double
             let categories: [CategorySnapshot]
+            let usePercentageDisplay: Bool?
         }
         struct CategorySnapshot: Decodable {
             let name: String
@@ -51,13 +52,19 @@ struct Provider: TimelineProvider {
         }
 
         guard let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) else {
-            return SimpleEntry(date: Date(), budgetTotal: 0, budgetSpent: 0, categories: [])
+            return SimpleEntry(date: Date(), budgetTotal: 0, budgetSpent: 0, categories: [], usePercentageDisplay: false)
         }
 
         let mappedCategories = snapshot.categories.map {
             CategoryData(name: $0.name, amount: $0.remainingAmount, ratio: $0.ratio)
         }
-        return SimpleEntry(date: Date(), budgetTotal: snapshot.budgetTotal, budgetSpent: snapshot.budgetSpent, categories: mappedCategories)
+        return SimpleEntry(
+            date: Date(),
+            budgetTotal: snapshot.budgetTotal,
+            budgetSpent: snapshot.budgetSpent,
+            categories: mappedCategories,
+            usePercentageDisplay: snapshot.usePercentageDisplay ?? false
+        )
     }
 }
 
@@ -72,6 +79,8 @@ struct SimpleEntry: TimelineEntry {
     let budgetTotal: Double
     let budgetSpent: Double
     let categories: [CategoryData]
+    /// プレミアムユーザーが有効化した場合、金額をパーセント表示にする
+    let usePercentageDisplay: Bool
 }
 
 // MARK: - ウィジェット本体ビュー
@@ -80,56 +89,88 @@ struct SimpleEntry: TimelineEntry {
 struct NoLookBudgetWidgetEntryView: View {
     var entry: SimpleEntry
 
-    var body: some View {
-        VStack(spacing: 10) {
+    // 7個以上でコンパクトモード（上部ゲージ縮小・カテゴリ固定サイズ）
+    private var isCompact: Bool { entry.categories.count > 6 }
+    // カテゴリ行数（3列）
+    private var categoryRows: Int { (entry.categories.count + 2) / 3 }
 
-            // ── 上半分: メインゲージ + 数値 ──
-            HStack(spacing: 10) {
-                // 左: 全体予算円グラフ
+    var body: some View {
+        VStack(spacing: isCompact ? 4 : 10) {
+
+            // ── 上部: メインゲージ + 数値（コンパクト時は横並びで縮小）──
+            HStack(spacing: 8) {
                 Link(destination: URL(string: "nolookbudget://dashboard")!) {
                     WidgetBudgetGaugeView(
                         totalAmount: entry.budgetTotal,
-                        spentAmount: entry.budgetSpent
+                        spentAmount: entry.budgetSpent,
+                        usePercentageDisplay: entry.usePercentageDisplay
                     )
-                    .frame(width: 110, height: 110)
+                    .frame(width: isCompact ? 60 : 110, height: isCompact ? 60 : 110)
                 }
 
-                // 右: 数値ブロック（ガラスパネル）
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Orbit Budget")
-                        .font(.system(size: 10, weight: .black, design: .rounded))
-                        .foregroundColor(.white.opacity(0.4))
-                        .padding(.bottom, 6)
+                    if !isCompact {
+                        Text("Orbit Budget")
+                            .font(.system(size: 10, weight: .black, design: .rounded))
+                            .foregroundColor(.white.opacity(0.4))
+                            .padding(.bottom, 6)
+                    }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("手取り総額")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.65))
-                            Text("¥\(Int(entry.budgetTotal))")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.white)
-                                .shadow(color: .black.opacity(0.4), radius: 3)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("使用済(固定費込)")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.65))
-                            Text("¥\(Int(entry.budgetSpent))")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(Theme.coralRed)
-                                .shadow(color: Theme.coralRed.opacity(0.5), radius: 4)
+                    VStack(alignment: .leading, spacing: isCompact ? 2 : 8) {
+                        if entry.usePercentageDisplay {
+                            let spentRatio = entry.budgetTotal > 0 ? (entry.budgetSpent / entry.budgetTotal) : 0
+                            let remainRatio = max(1.0 - spentRatio, 0)
+                            HStack(spacing: isCompact ? 12 : 0) {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("残り")
+                                        .font(.system(size: 9, weight: .semibold))
+                                        .foregroundColor(.white.opacity(0.65))
+                                    Text("\(Int(remainRatio * 100))%")
+                                        .font(.system(size: isCompact ? 14 : 22, weight: .black, design: .rounded))
+                                        .foregroundColor(Theme.spaceGreen)
+                                }
+                                if !isCompact { Spacer(minLength: 0) }
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("使用済")
+                                        .font(.system(size: 9, weight: .semibold))
+                                        .foregroundColor(.white.opacity(0.65))
+                                    Text("\(Int(spentRatio * 100))%")
+                                        .font(.system(size: isCompact ? 14 : 22, weight: .black, design: .rounded))
+                                        .foregroundColor(Theme.coralRed)
+                                }
+                            }
+                        } else {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("手取り総額")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.65))
+                                Text("¥\(Int(entry.budgetTotal))")
+                                    .font(.system(size: isCompact ? 13 : 16, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .minimumScaleFactor(0.6)
+                                    .lineLimit(1)
+                            }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("使用済")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.65))
+                                Text("¥\(Int(entry.budgetSpent))")
+                                    .font(.system(size: isCompact ? 13 : 16, weight: .bold))
+                                    .foregroundColor(Theme.coralRed)
+                                    .minimumScaleFactor(0.6)
+                                    .lineLimit(1)
+                            }
                         }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .padding(.horizontal, isCompact ? 6 : 12)
+                .padding(.vertical, isCompact ? 4 : 10)
                 .background(
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: isCompact ? 10 : 14)
                         .fill(Color.black.opacity(0.45))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14)
+                            RoundedRectangle(cornerRadius: isCompact ? 10 : 14)
                                 .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
                         )
                 )
@@ -140,21 +181,35 @@ struct NoLookBudgetWidgetEntryView: View {
                 .fill(Color.white.opacity(0.12))
                 .frame(height: 0.5)
 
-            // ── 下半分: カテゴリ一覧（ガラスパネル）──
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
-                spacing: 8
-            ) {
-                ForEach(entry.categories, id: \.name) { cat in
-                    Link(destination: URL(
-                        string: "nolookbudget://category/\(cat.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "")"
-                    )!) {
-                        WidgetCategoryGaugeView(name: cat.name, amount: cat.amount, ratio: cat.ratio)
+            // ── 下半分: カテゴリ一覧（残りスペースを全て使い切る）──
+            GeometryReader { geo in
+                let columns = 3
+                let rows = (entry.categories.count + columns - 1) / columns
+                let hSpacing: CGFloat = isCompact ? 6 : 8
+                let vSpacing: CGFloat = isCompact ? 6 : 8
+                let totalHSpacing = hSpacing * CGFloat(columns - 1)
+                let totalVSpacing = vSpacing * CGFloat(max(rows - 1, 0))
+                let cellWidth = (geo.size.width - totalHSpacing) / CGFloat(columns)
+                let cellHeight = (geo.size.height - totalVSpacing) / CGFloat(max(rows, 1))
+                let cellSize = min(cellWidth, cellHeight)
+
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.fixed(cellSize), spacing: hSpacing), count: columns),
+                    spacing: vSpacing
+                ) {
+                    ForEach(entry.categories, id: \.name) { cat in
+                        Link(destination: URL(
+                            string: "nolookbudget://category/\(cat.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "")"
+                        )!) {
+                            WidgetCategoryGaugeView(name: cat.name, amount: cat.amount, ratio: cat.ratio, usePercentageDisplay: entry.usePercentageDisplay, compact: isCompact)
+                                .frame(width: cellSize, height: cellSize)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 8)
+            .padding(.horizontal, isCompact ? 4 : 6)
+            .padding(.vertical, isCompact ? 4 : 8)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color.black.opacity(0.38))
@@ -163,12 +218,10 @@ struct NoLookBudgetWidgetEntryView: View {
                             .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
                     )
             )
-
-            Spacer(minLength: 0)
         }
-        .padding(.top, 24)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 12)
+        .padding(.top, isCompact ? 10 : 24)
+        .padding(.horizontal, isCompact ? 8 : 16)
+        .padding(.bottom, isCompact ? 4 : 12)
     }
 }
 
@@ -204,7 +257,8 @@ struct MediumWidgetView: View {
                 Link(destination: URL(string: "nolookbudget://dashboard")!) {
                     WidgetBudgetGaugeView(
                         totalAmount: entry.budgetTotal,
-                        spentAmount: entry.budgetSpent
+                        spentAmount: entry.budgetSpent,
+                        usePercentageDisplay: entry.usePercentageDisplay
                     )
                     .frame(width: 70, height: 70)
                 }
@@ -216,23 +270,46 @@ struct MediumWidgetView: View {
                         .padding(.bottom, 4)
 
                     HStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("手取り総額")
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.6))
-                            Text("¥\(Int(entry.budgetTotal))")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                                .shadow(color: .black.opacity(0.4), radius: 3)
-                        }
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("使用済")
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.6))
-                            Text("¥\(Int(entry.budgetSpent))")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .foregroundColor(Theme.coralRed)
-                                .shadow(color: Theme.coralRed.opacity(0.5), radius: 4)
+                        if entry.usePercentageDisplay {
+                            let spentRatio = entry.budgetTotal > 0 ? (entry.budgetSpent / entry.budgetTotal) : 0
+                            let remainRatio = max(1.0 - spentRatio, 0)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("残り")
+                                    .font(.system(size: 8, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.6))
+                                Text("\(Int(remainRatio * 100))%")
+                                    .font(.system(size: 14, weight: .black, design: .rounded))
+                                    .foregroundColor(Theme.spaceGreen)
+                                    .shadow(color: Theme.spaceGreen.opacity(0.5), radius: 3)
+                            }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("使用済")
+                                    .font(.system(size: 8, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.6))
+                                Text("\(Int(spentRatio * 100))%")
+                                    .font(.system(size: 14, weight: .black, design: .rounded))
+                                    .foregroundColor(Theme.coralRed)
+                                    .shadow(color: Theme.coralRed.opacity(0.5), radius: 4)
+                            }
+                        } else {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("手取り総額")
+                                    .font(.system(size: 8, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.6))
+                                Text("¥\(Int(entry.budgetTotal))")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                    .shadow(color: .black.opacity(0.4), radius: 3)
+                            }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("使用済")
+                                    .font(.system(size: 8, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.6))
+                                Text("¥\(Int(entry.budgetSpent))")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(Theme.coralRed)
+                                    .shadow(color: Theme.coralRed.opacity(0.5), radius: 4)
+                            }
                         }
                     }
                 }
@@ -253,7 +330,7 @@ struct MediumWidgetView: View {
                     Link(destination: URL(
                         string: "nolookbudget://category/\(cat.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "")"
                     )!) {
-                        MediumCategoryBarView(category: cat)
+                        MediumCategoryBarView(category: cat, usePercentageDisplay: entry.usePercentageDisplay)
                     }
                 }
             }
@@ -270,6 +347,7 @@ struct MediumWidgetView: View {
 
 struct MediumCategoryBarView: View {
     let category: CategoryData
+    var usePercentageDisplay: Bool = false
 
     private var barColor: Color {
         if category.ratio >= 1.0 { return Theme.coralRed }
@@ -307,12 +385,22 @@ struct MediumCategoryBarView: View {
             }
             .frame(height: 12)
 
-            Text(amountString)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundColor(barColor)
-                .frame(width: 50, alignment: .trailing)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
+            if usePercentageDisplay {
+                let remainPercent = max(Int((1.0 - category.ratio) * 100), 0)
+                Text("\(remainPercent)%")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(barColor)
+                    .frame(width: 50, alignment: .trailing)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            } else {
+                Text(amountString)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(barColor)
+                    .frame(width: 50, alignment: .trailing)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            }
         }
     }
 }
@@ -353,6 +441,7 @@ struct NoLookBudgetWidget: Widget {
 struct WidgetBudgetGaugeView: View {
     let totalAmount: Double
     let spentAmount: Double
+    var usePercentageDisplay: Bool = false
 
     var remainingAmount: Double { totalAmount - spentAmount }
 
@@ -406,12 +495,22 @@ struct WidgetBudgetGaugeView: View {
                     .foregroundColor(.white.opacity(0.7))
                     .minimumScaleFactor(0.8)
                     .lineLimit(1)
-                Text("¥\(Int(remainingAmount))")
-                    .font(.system(size: 16, weight: .black))
-                    .foregroundColor(remainingColor)
-                    .shadow(color: remainingColor.opacity(0.5), radius: 4)
-                    .minimumScaleFactor(0.4)
-                    .lineLimit(1)
+                if usePercentageDisplay {
+                    let remainRatio = totalAmount > 0 ? max((totalAmount - spentAmount) / totalAmount, 0) : 0
+                    Text("\(Int(remainRatio * 100))%")
+                        .font(.system(size: 20, weight: .black, design: .rounded))
+                        .foregroundColor(remainingColor)
+                        .shadow(color: remainingColor.opacity(0.5), radius: 4)
+                        .minimumScaleFactor(0.4)
+                        .lineLimit(1)
+                } else {
+                    Text("¥\(Int(remainingAmount))")
+                        .font(.system(size: 16, weight: .black))
+                        .foregroundColor(remainingColor)
+                        .shadow(color: remainingColor.opacity(0.5), radius: 4)
+                        .minimumScaleFactor(0.4)
+                        .lineLimit(1)
+                }
             }
             .padding(.horizontal, 20)
         }
@@ -423,6 +522,8 @@ struct WidgetCategoryGaugeView: View {
     let name: String
     let amount: Int
     let ratio: Double
+    var usePercentageDisplay: Bool = false
+    var compact: Bool = false
 
     var amountColor: Color {
         if ratio >= 1.0 { return Theme.coralRed }
@@ -432,15 +533,22 @@ struct WidgetCategoryGaugeView: View {
 
     var amountString: String { amount < 0 ? "-¥\(-amount)" : "¥\(amount)" }
 
+    /// パーセント表示用の文字列（残りパーセント）
+    var percentageString: String {
+        let remainPercent = max(Int((1.0 - ratio) * 100), 0)
+        return "\(remainPercent)%"
+    }
+
+    private var lineWidth: CGFloat { compact ? 6 : 9 }
+
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.15), style: StrokeStyle(lineWidth: 9, lineCap: .butt))
+                .stroke(Color.white.opacity(0.15), style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
 
             let clampedRatio = min(max(ratio, 0), 1)
 
-            // startAngle:0°(3時) → rotationEffect(-90°) → 12時開始に補正
             Circle()
                 .trim(from: 0, to: clampedRatio)
                 .stroke(
@@ -450,45 +558,74 @@ struct WidgetCategoryGaugeView: View {
                         startAngle: .degrees(0),
                         endAngle: .degrees(360)
                     ),
-                    style: StrokeStyle(lineWidth: 9, lineCap: .butt)
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt)
                 )
                 .rotationEffect(.degrees(-90))
 
             if clampedRatio < 1.0 {
                 Circle()
                     .trim(from: clampedRatio + 0.02, to: 1)
-                    .stroke(Theme.safeGradient, style: StrokeStyle(lineWidth: 9, lineCap: .butt))
+                    .stroke(Theme.safeGradient, style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
                     .rotationEffect(.degrees(-90))
             }
 
-            VStack(spacing: 2) {
+            VStack(spacing: compact ? 1 : 2) {
                 Text(name)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: compact ? 8 : 10, weight: .bold))
                     .foregroundColor(.white.opacity(0.85))
                     .shadow(color: .black.opacity(0.5), radius: 2)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
-                Text(amountString)
-                    .font(.system(size: 13, weight: .bold))
+                Text(usePercentageDisplay ? percentageString : amountString)
+                    .font(.system(size: compact ? 10 : 13, weight: .bold))
                     .foregroundColor(amountColor)
                     .shadow(color: amountColor.opacity(0.4), radius: 3)
-                    .minimumScaleFactor(0.5)
+                    .minimumScaleFactor(0.4)
                     .lineLimit(1)
             }
-            .padding(.horizontal, 6)
+            .padding(.horizontal, compact ? 3 : 6)
         }
         .aspectRatio(1.0, contentMode: .fit)
     }
 }
 
-#Preview("Large", as: .systemLarge) {
+#Preview("Large (6カテゴリ)", as: .systemLarge) {
+    NoLookBudgetWidget()
+} timeline: {
+    SimpleEntry(date: .now, budgetTotal: 250000, budgetSpent: 100000, categories: [
+        CategoryData(name: "食費", amount: 20000, ratio: 0.8),
+        CategoryData(name: "交際費", amount: 15000, ratio: 0.4),
+        CategoryData(name: "日用品", amount: 15000, ratio: 0.1),
+        CategoryData(name: "趣味・娯楽", amount: 10000, ratio: 0.3),
+        CategoryData(name: "交通費", amount: 8000, ratio: 0.5),
+        CategoryData(name: "美容・衣服", amount: 12000, ratio: 0.6)
+    ], usePercentageDisplay: false)
+}
+
+#Preview("Large (9カテゴリ/Premium)", as: .systemLarge) {
+    NoLookBudgetWidget()
+} timeline: {
+    SimpleEntry(date: .now, budgetTotal: 250000, budgetSpent: 100000, categories: [
+        CategoryData(name: "食費", amount: 20000, ratio: 0.8),
+        CategoryData(name: "交際費", amount: 15000, ratio: 0.4),
+        CategoryData(name: "日用品", amount: 15000, ratio: 0.1),
+        CategoryData(name: "趣味・娯楽", amount: 10000, ratio: 0.3),
+        CategoryData(name: "交通費", amount: 8000, ratio: 0.5),
+        CategoryData(name: "美容・衣服", amount: 12000, ratio: 0.6),
+        CategoryData(name: "教育費", amount: 5000, ratio: 0.2),
+        CategoryData(name: "ポーカー", amount: 3000, ratio: 0.9),
+        CategoryData(name: "ペット", amount: 7000, ratio: 0.4)
+    ], usePercentageDisplay: false)
+}
+
+#Preview("Large (% 表示)", as: .systemLarge) {
     NoLookBudgetWidget()
 } timeline: {
     SimpleEntry(date: .now, budgetTotal: 250000, budgetSpent: 100000, categories: [
         CategoryData(name: "食費", amount: 20000, ratio: 0.8),
         CategoryData(name: "交際費", amount: 15000, ratio: 0.4),
         CategoryData(name: "変動費", amount: 15000, ratio: 0.1)
-    ])
+    ], usePercentageDisplay: true)
 }
 
 #Preview("Medium", as: .systemMedium) {
@@ -499,5 +636,16 @@ struct WidgetCategoryGaugeView: View {
         CategoryData(name: "交際費", amount: 15000, ratio: 0.4),
         CategoryData(name: "日用品", amount: 15000, ratio: 0.1),
         CategoryData(name: "趣味", amount: 8000, ratio: 0.6)
-    ])
+    ], usePercentageDisplay: false)
+}
+
+#Preview("Medium (% 表示)", as: .systemMedium) {
+    NoLookBudgetWidget()
+} timeline: {
+    SimpleEntry(date: .now, budgetTotal: 250000, budgetSpent: 100000, categories: [
+        CategoryData(name: "食費", amount: 20000, ratio: 0.8),
+        CategoryData(name: "交際費", amount: 15000, ratio: 0.4),
+        CategoryData(name: "日用品", amount: 15000, ratio: 0.1),
+        CategoryData(name: "趣味", amount: 8000, ratio: 0.6)
+    ], usePercentageDisplay: true)
 }

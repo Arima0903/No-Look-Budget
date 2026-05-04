@@ -28,14 +28,31 @@ class ConfigurationViewModel: ObservableObject {
     // 「その他」カテゴリ名定数
     static let otherCategoryName = "その他"
 
-    // バリデーション用（「その他」は常時存在するため除いた数で判定）
+    // デフォルト固定カテゴリ（無償プランで削除・名前変更不可）
+    static let defaultCategoryNames: [String] = ["食費", "交際費", "日用品", "趣味・娯楽", "交通費", "美容・衣服"]
+
+    // プレミアムフラグ
+    var isPremium: Bool {
+        UserDefaults.standard.bool(forKey: "isPremiumEnabled")
+    }
+
+    // カテゴリ追加可否（プレミアム: 最大9個、無償: 固定6個のみ＝追加不可）
     var canAddCategory: Bool {
-        categories.filter { $0.name != Self.otherCategoryName }.count < 5
+        guard isPremium else { return false }
+        let customCount = categories.filter { cat in
+            cat.name != Self.otherCategoryName && !Self.defaultCategoryNames.contains(cat.name)
+        }.count
+        return customCount < 3
+    }
+
+    /// デフォルトカテゴリかどうかを判定
+    static func isDefaultCategory(_ name: String) -> Bool {
+        defaultCategoryNames.contains(name) || name == otherCategoryName
     }
     
     var isCategoryNameValid: Bool {
-        // スペース（全半角）、英数字（全半角）、ひらがな、カタカナ、漢字のみ許可（記号不可）
-        let pattern = "^[a-zA-Z0-9ぁ-んァ-ヶ一-龠々ａ-ｚＡ-Ｚ０-９\\s　]+$"
+        // スペース（全半角）、英数字（全半角）、ひらがな、カタカナ（長音・中黒含む）、漢字のみ許可
+        let pattern = "^[a-zA-Z0-9ぁ-んァ-ヶー・一-龠々ａ-ｚＡ-Ｚ０-９\\s　]+$"
         return draftCategoryName.range(of: pattern, options: .regularExpression) != nil
     }
     
@@ -83,19 +100,31 @@ class ConfigurationViewModel: ObservableObject {
     func saveBudget() {
         let budgetDesc = FetchDescriptor<Budget>(sortBy: [SortDescriptor(\.month, order: .reverse)])
         var currentBudget: Budget
-        
+
         let calendar = Calendar.current
         let currentYearMonth = calendar.dateComponents([.year, .month], from: Date())
-        
+        let startOfMonth = calendar.date(from: currentYearMonth) ?? Date()
+
         let budgets = (try? context.fetch(budgetDesc)) ?? []
         if let existing = budgets.first(where: {
             let bComponents = calendar.dateComponents([.year, .month], from: $0.month)
             return bComponents.year == currentYearMonth.year && bComponents.month == currentYearMonth.month
-        }) ?? budgets.first {
+        }) {
             currentBudget = existing
+        } else if let prevBudget = budgets.first {
+            // 当月のBudgetがない場合: 前月の設定を引き継いで新規作成
+            let overAmount = max(0, prevBudget.spentAmount - prevBudget.totalAmount)
+            currentBudget = Budget(
+                month: startOfMonth,
+                totalAmount: prevBudget.totalAmount,
+                spentAmount: overAmount,
+                incomeAmount: prevBudget.incomeAmount,
+                savingsAmount: prevBudget.savingsAmount
+            )
+            context.insert(currentBudget)
         } else {
             // 初期状態でデータが一つもない場合は作成する
-            currentBudget = Budget(month: Date(), totalAmount: 0, spentAmount: 0)
+            currentBudget = Budget(month: startOfMonth, totalAmount: 0, spentAmount: 0)
             context.insert(currentBudget)
         }
         
@@ -255,6 +284,12 @@ class ConfigurationViewModel: ObservableObject {
         draftCategoryAmount = "\(Int(category.totalAmount))"
         showCategoryModal = true
     }
+
+    /// デフォルトカテゴリの場合は名前変更不可（予算額のみ変更可）
+    var isEditingDefaultCategory: Bool {
+        guard let cat = editingCategory else { return false }
+        return Self.defaultCategoryNames.contains(cat.name)
+    }
     
     // カテゴリの保存（追加または更新）
     func saveCategory() {
@@ -283,10 +318,10 @@ class ConfigurationViewModel: ObservableObject {
         showCategoryModal = false
     }
 
-    // カテゴリの削除（「その他」は削除不可）
+    // カテゴリの削除（デフォルト固定カテゴリ・その他は削除不可、カスタムカテゴリのみ削除可）
     func deleteCategories(at offsets: IndexSet) {
-        // 「その他」を除外してから削除
-        let deletableOffsets = offsets.filter { categories[$0].name != Self.otherCategoryName }
+        // デフォルトカテゴリと「その他」を除外して削除
+        let deletableOffsets = offsets.filter { !Self.isDefaultCategory(categories[$0].name) }
         deletableOffsets.forEach { index in
             context.delete(categories[index])
         }
@@ -383,22 +418,45 @@ class ConfigurationViewModel: ObservableObject {
         let catDesc = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])
         let cats = (try? context.fetch(catDesc)) ?? []
 
+        // 当月のカテゴリ別支出額を ExpenseTransaction から集計
+        var monthlyCatSpent: [UUID: Double] = [:]
+        if let startOfMonth = calendar.date(from: currentYM),
+           let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1, hour: 23, minute: 59, second: 59), to: startOfMonth) {
+            let txPredicate = #Predicate<ExpenseTransaction> { tx in
+                tx.date >= startOfMonth && tx.date <= endOfMonth
+                && tx.isIncome == false && tx.isIOU == false && tx.isFixedCost == false
+            }
+            let txDesc = FetchDescriptor<ExpenseTransaction>(predicate: txPredicate)
+            let monthlyTxs = (try? context.fetch(txDesc)) ?? []
+            for tx in monthlyTxs {
+                if let catId = tx.categoryId {
+                    monthlyCatSpent[catId, default: 0] += tx.amount
+                }
+            }
+        }
+
         struct CatSnap: Encodable {
             let name: String; let remainingAmount: Int; let ratio: Double
         }
         struct Snap: Encodable {
-            let budgetTotal: Double; let budgetSpent: Double; let categories: [CatSnap]
+            let budgetTotal: Double; let budgetSpent: Double; let categories: [CatSnap]; let usePercentageDisplay: Bool
         }
+        let usePercentage = UserDefaults.standard.bool(forKey: "widgetPercentageDisplay")
+        let isPremiumFlag = UserDefaults.standard.bool(forKey: "isPremiumEnabled")
+        let maxCats = isPremiumFlag ? 9 : 6
+        let displayCats = cats.filter { $0.name != Self.otherCategoryName }
         let snap = Snap(
             budgetTotal: displayTotal,
             budgetSpent: budgetSpent,
-            categories: cats.prefix(6).map {
-                CatSnap(
-                    name: $0.name,
-                    remainingAmount: Int($0.totalAmount - $0.spentAmount),
-                    ratio: $0.totalAmount > 0 ? ($0.spentAmount / $0.totalAmount) : 0.0
+            categories: Array(displayCats.prefix(maxCats)).map { cat in
+                let spent = monthlyCatSpent[cat.id] ?? 0
+                return CatSnap(
+                    name: cat.name,
+                    remainingAmount: Int(cat.totalAmount - spent),
+                    ratio: cat.totalAmount > 0 ? (spent / cat.totalAmount) : 0.0
                 )
-            }
+            },
+            usePercentageDisplay: usePercentage
         )
         if let encoded = try? JSONEncoder().encode(snap) {
             defaults.set(encoded, forKey: key)

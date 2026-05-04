@@ -27,6 +27,10 @@ struct NoLookBudgetApp: App {
                 .onOpenURL { url in
                     deepLinkManager.handleURL(url)
                 }
+                .task {
+                    // アプリ起動時に通知スケジュールを再登録
+                    NotificationService.rescheduleAll()
+                }
         }
         .modelContainer(SharedModelContainer.shared)
     }

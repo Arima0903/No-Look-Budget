@@ -16,6 +16,7 @@ struct WidgetBudgetSnapshot: Codable {
     let budgetTotal: Double   // 手取り総額（incomeAmount ?? totalAmount）
     let budgetSpent: Double   // 使用済み（固定費込み）
     let categories: [WidgetCategorySnapshot]
+    let usePercentageDisplay: Bool  // パーセント表示モード（プレミアム機能）
 }
 
 struct WidgetCategorySnapshot: Codable {
@@ -49,10 +50,13 @@ enum WidgetDataManager {
         let fixedAndSavings = displayTotal - (budget?.totalAmount ?? 0.0)
         let budgetSpent = (budget?.spentAmount ?? 0.0) + fixedAndSavings
 
-        // カテゴリ取得
+        // カテゴリ取得（その他を除外、プレミアム: 9個、無償: 6個）
         let catDesc = FetchDescriptor<ItemCategory>(sortBy: [SortDescriptor(\.orderIndex)])
         let cats = (try? context.fetch(catDesc)) ?? []
-        let catSnapshots = cats.prefix(6).map {
+        let isPremium = UserDefaults.standard.bool(forKey: "isPremiumEnabled")
+        let maxCats = isPremium ? 9 : 6
+        let displayCats = cats.filter { $0.name != "その他" }
+        let catSnapshots = Array(displayCats.prefix(maxCats)).map {
             WidgetCategorySnapshot(
                 name: $0.name,
                 remainingAmount: Int($0.totalAmount - $0.spentAmount),
@@ -60,10 +64,12 @@ enum WidgetDataManager {
             )
         }
 
+        let usePercentage = UserDefaults.standard.bool(forKey: "widgetPercentageDisplay")
         let snapshot = WidgetBudgetSnapshot(
             budgetTotal: displayTotal,
             budgetSpent: budgetSpent,
-            categories: Array(catSnapshots)
+            categories: Array(catSnapshots),
+            usePercentageDisplay: usePercentage
         )
 
         if let encoded = try? JSONEncoder().encode(snapshot) {

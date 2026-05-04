@@ -24,6 +24,13 @@ struct ContentView: View {
             // 規約同意済み・チュートリアル未完了 → チュートリアル表示
             TutorialView {
                 hasCompletedTutorial = true
+                // チュートリアル完了後に通知許可を要求
+                Task {
+                    let granted = await NotificationService.requestAuthorization()
+                    if granted {
+                        NotificationService.rescheduleAll()
+                    }
+                }
             }
         } else {
             // 全て完了 → ダッシュボードへ

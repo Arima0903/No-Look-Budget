@@ -110,6 +110,37 @@ struct DashboardView: View {
                                 .transition(.move(edge: .top).combined(with: .opacity))
                             }
 
+                            // 月末振り返りレポート通知（借金がない場合のみ表示）
+                            if viewModel.hasMonthlyReviewAvailable && !viewModel.hasDebtFromLastMonth {
+                                Button(action: {
+                                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                                    generator.impactOccurred()
+                                    viewModel.showMonthlyReview = true
+                                }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "chart.bar.doc.horizontal.fill")
+                                            .font(.caption)
+                                            .foregroundColor(Theme.spaceGreen)
+                                        Text("先月の振り返りレポートがあります")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(Theme.spaceGreen)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2)
+                                            .foregroundColor(Theme.spaceGreen.opacity(0.7))
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Theme.spaceGreen.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Theme.spaceGreen.opacity(0.3), lineWidth: 1)
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+
                             // 借金警告（コンパクトピル）
                             if viewModel.hasDebtFromLastMonth {
                                 Button(action: {
@@ -166,6 +197,7 @@ struct DashboardView: View {
                         .padding(.horizontal, 20)
 
                         // 下部：項目別の小ウィジェット（カテゴリ）
+                        // 無償プラン: 6個、有償プラン: 最大9個（その他は除外）
                         VStack(alignment: .leading, spacing: 10) {
                             Text("予算別残り予算")
                                 .font(.headline)
@@ -173,8 +205,12 @@ struct DashboardView: View {
                                 .shadow(color: .black.opacity(0.6), radius: 4)
                                 .padding(.horizontal, 15)
 
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 20) {
-                                if viewModel.categories.isEmpty {
+                            let displayCategories = viewModel.categories.filter { $0.name != ConfigurationViewModel.otherCategoryName }
+                            // 9個の場合は少し小さくするためにspacingを調整
+                            let gridSpacing: CGFloat = displayCategories.count > 6 ? 12 : 20
+
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: gridSpacing) {
+                                if displayCategories.isEmpty {
                                     // カテゴリ未設定時の空状態UI
                                     VStack(spacing: 15) {
                                         Image(systemName: "folder.badge.plus")
@@ -185,15 +221,20 @@ struct DashboardView: View {
                                             .foregroundColor(.gray)
                                             .multilineTextAlignment(.center)
                                     }
-                                    // グリッドの3列分の中央に配置するためのハック
                                     .frame(maxWidth: .infinity)
                                     .gridCellColumns(3)
                                     .padding(.top, 20)
                                 } else {
-                                    ForEach(viewModel.categories) { category in
-                                        let ratio = category.totalAmount > 0 ? (category.spentAmount / category.totalAmount) : 0
+                                    ForEach(displayCategories) { category in
+                                        let monthlySpent = viewModel.categoryMonthlySpent[category.id] ?? 0
+                                        let ratio = category.totalAmount > 0 ? (monthlySpent / category.totalAmount) : 0
                                         NavigationLink(value: category.name) {
-                                            CategoryGaugeView(name: category.name, amount: Int(category.remainingAmount), ratio: ratio)
+                                            CategoryGaugeView(
+                                                name: category.name,
+                                                amount: Int(category.totalAmount - monthlySpent),
+                                                ratio: ratio,
+                                                compact: displayCategories.count > 6
+                                            )
                                         }
                                         .simultaneousGesture(TapGesture().onEnded {
                                             let generator = UIImpactFeedbackGenerator(style: .light)
@@ -562,7 +603,8 @@ struct CategoryGaugeView: View {
     let name: String
     let amount: Int
     let ratio: Double
-    
+    var compact: Bool = false
+
     var amountColor: Color {
         // 文字の色: 50%を超えると黄色、100%を超えると赤
         if ratio >= 1.0 { return Theme.coralRed }
@@ -613,21 +655,28 @@ struct CategoryGaugeView: View {
                     .rotationEffect(.degrees(-90))
             }
             
-            VStack(spacing: 2) {
+            VStack(spacing: compact ? 1 : 2) {
                 Text(name)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: compact ? 9 : 10, weight: .bold))
                     .foregroundColor(.white.opacity(0.85))
                     .shadow(color: .black.opacity(0.5), radius: 2)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
                 Text(amountString)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: compact ? 10 : 12, weight: .bold))
                     .foregroundColor(amountColor)
                     .shadow(color: amountColor.opacity(0.4), radius: 3)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8))
-                    .foregroundColor(.white.opacity(0.4))
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                if !compact {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8))
+                        .foregroundColor(.white.opacity(0.4))
+                }
             }
+            .padding(.horizontal, 4)
         }
-        .frame(width: 80, height: 80)
+        .frame(width: compact ? 68 : 80, height: compact ? 68 : 80)
     }
 }
 

@@ -93,6 +93,18 @@ struct PaywallView: View {
                             description: "月次推移グラフや支出傾向の深掘り分析で、次の予算設定をよりスマートに。"
                         )
                         premiumFeatureCard(
+                            icon: "eye.slash.fill",
+                            iconColor: Color(red: 0.3, green: 0.8, blue: 1.0),
+                            title: "ウィジェット プライバシーモード",
+                            description: "ウィジェットの金額表示をパーセントに切替可能。他人に見られても金額がバレません。"
+                        )
+                        premiumFeatureCard(
+                            icon: "folder.badge.plus",
+                            iconColor: Color(red: 0.9, green: 0.7, blue: 0.2),
+                            title: "カスタムカテゴリ追加",
+                            description: "デフォルト6カテゴリに加えて、自分だけのカテゴリを3つまで追加。ウィジェットにも最大9カテゴリ表示。"
+                        )
+                        premiumFeatureCard(
                             icon: "paintpalette.fill",
                             iconColor: Color(red: 0.6, green: 0.4, blue: 1.0),
                             title: "カスタムテーマ",
